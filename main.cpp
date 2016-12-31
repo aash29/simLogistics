@@ -40,11 +40,16 @@
 
 #include <GLFW/glfw3.h>
 #include <stdio.h>
+#include "entityx/entityx.h"
 
 
 #ifdef _MSC_VER
 #define snprintf _snprintf
 #endif
+
+namespace exn = entityx;
+
+entityx::EntityX ex;
 
 //
 struct UIState {
@@ -54,6 +59,22 @@ struct UIState {
     bool mouseOverMenu;
     bool chooseTest;
 };
+
+struct Position {
+	Position(const int x, const int y)
+		: x(x), y(y) {}
+
+	int x;
+	int y;
+};
+
+
+struct Edible {
+	Edible(const std::string name)
+		: name(name) {}
+	std::string name;
+};
+
 
 //
 namespace {
@@ -258,6 +279,11 @@ static void sMouseButton(GLFWwindow *, int32 button, int32 action, int32 mods) {
             }
             else {
                 test->MouseDown(pw);
+
+				ex.entities.each<Position, Edible>([](exn::Entity entity, Position &position, Edible &edible) {
+					// Do things with entity, position and direction.
+				});
+
             }
         }
 
@@ -448,6 +474,14 @@ int main(int argc, char **argv) {
     double frameTime = 0.0;
 
     glClearColor(0.3f, 0.3f, 0.3f, 1.f);
+
+	entityx::Entity entity = ex.entities.create();
+	entity.assign<Position>(1.0f, 2.0f);
+	entity.assign<Edible>("food");
+
+
+
+
 
 
     while (!glfwWindowShouldClose(mainWindow)) {
