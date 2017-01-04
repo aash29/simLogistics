@@ -68,12 +68,20 @@ struct Position {
 	int y;
 };
 
+Position currentCell = Position(0,0);
 
 struct Edible {
 	Edible(const std::string name)
 		: name(name) {}
 	std::string name;
 };
+
+struct Renderable
+{ 	Renderable(const char glyph )
+            : glyph(glyph) {}
+    char glyph;
+};
+
 
 
 //
@@ -280,9 +288,11 @@ static void sMouseButton(GLFWwindow *, int32 button, int32 action, int32 mods) {
             else {
                 test->MouseDown(pw);
 
-				ex.entities.each<Position, Edible>([](exn::Entity entity, Position &position, Edible &edible) {
-					// Do things with entity, position and direction.
-				});
+                int cx = floor(pw.x);
+                int cy = floor(pw.y);
+
+                currentCell.x=cx;
+                currentCell.y=cy;
 
             }
         }
@@ -318,6 +328,7 @@ static void sMouseMotion(GLFWwindow *, double xd, double yd) {
     b2Vec2 ps((float) xd, (float) yd);
 
     b2Vec2 pw = g_camera.ConvertScreenToWorld(ps);
+
     test->MouseMove(pw);
 
     if (rightMouseDown) {
@@ -392,7 +403,25 @@ static void sInterface() {
 
     ImGui::Separator();
 
-	ImGui::Text("%g,%g", g_camera.m_center.x, g_camera.m_center.y);
+	ImGui::Text("Camera: %g,%g", g_camera.m_center.x, g_camera.m_center.y);
+    ImGui::Text("Current cell: %d,%d", currentCell.x, currentCell.y);
+
+    ex.entities.each<Position, Edible>([](exn::Entity entity, Position &position, Edible &edible) {
+        if ((position.x==currentCell.x) && (position.y==currentCell.y))
+        {
+            ImGui::Text("food");
+        }
+    });
+
+    ex.entities.each<Position, Renderable>([](exn::Entity entity, Position &position ,Renderable &renderable) {
+        char buffer[32];
+        //snprintf(buffer, 1, (char*)renderable.glyph);
+        snprintf(buffer, 6, "lalala");
+        b2Vec2 p1 =g_camera.ConvertWorldToScreen(b2Vec2(position.x,position.y));
+
+        AddGfxCmdText(p1.x,g_camera.m_height-p1.y,TEXT_ALIGN_LEFT, buffer, WHITE);
+    });
+
 
     ImGui::End();
 
@@ -478,6 +507,7 @@ int main(int argc, char **argv) {
 	entityx::Entity entity = ex.entities.create();
 	entity.assign<Position>(1.0f, 2.0f);
 	entity.assign<Edible>("food");
+    entity.assign<Renderable>('F');
 
 
 

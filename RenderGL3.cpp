@@ -475,7 +475,7 @@ bool RenderGLInit(const char *fontpath) {
         return false;
     }
 
-    stbtt_BakeFontBitmap(ttfBuffer, 0, 15.0f, bmap, 512, 512, 32, 96, g_cdata);
+    stbtt_BakeFontBitmap(ttfBuffer, 0, 64.0f, bmap, 512, 512, 32, 96, g_cdata);
 
     // can free ttf_buffer at this point
     glGenTextures(1, &g_ftex);
