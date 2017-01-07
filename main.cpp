@@ -40,7 +40,10 @@
 
 #include <GLFW/glfw3.h>
 #include <stdio.h>
-#include "entityx/entityx.h"
+//#include "entityx/entityx.h"
+#include "gamelogic.h"
+
+#include <vector>
 
 
 #ifdef _MSC_VER
@@ -58,28 +61,6 @@ struct UIState {
     int scrollarea1;
     bool mouseOverMenu;
     bool chooseTest;
-};
-
-struct Position {
-	Position(const int x, const int y)
-		: x(x), y(y) {}
-
-	int x;
-	int y;
-};
-
-Position currentCell = Position(0,0);
-
-struct Edible {
-	Edible(const std::string name)
-		: name(name) {}
-	std::string name;
-};
-
-struct Renderable
-{ 	Renderable(const char glyph )
-            : glyph(glyph) {}
-    char glyph;
 };
 
 
@@ -294,6 +275,12 @@ static void sMouseButton(GLFWwindow *, int32 button, int32 action, int32 mods) {
                 currentCell.x=cx;
                 currentCell.y=cy;
 
+				ImGui::OpenPopup("popup from button");
+				if (ImGui::BeginPopup("popup from button")) {
+					ImGui::MenuItem("New");
+					ImGui::EndPopup();
+				}
+
             }
         }
 
@@ -355,13 +342,6 @@ static void sScrollCallback(GLFWwindow *, double, double dy) {
 }
 
 //
-static void sRestart() {
-    delete test;
-    entry = g_testEntries + testIndex;
-    test = entry->createFcn();
-}
-
-//
 static void sSimulate() {
     glEnable(GL_DEPTH_TEST);
     test->Step(&settings);
@@ -406,18 +386,19 @@ static void sInterface() {
 	ImGui::Text("Camera: %g,%g", g_camera.m_center.x, g_camera.m_center.y);
     ImGui::Text("Current cell: %d,%d", currentCell.x, currentCell.y);
 
-    ex.entities.each<Position, Edible>([](exn::Entity entity, Position &position, Edible &edible) {
+    ex.entities.each<Position, BaseProperties>([](exn::Entity entity, Position &position, BaseProperties &baseproperties) {
         if ((position.x==currentCell.x) && (position.y==currentCell.y))
         {
-            ImGui::Text("food");
+            ImGui::Text(baseproperties.name.c_str());
         }
     });
 
     ex.entities.each<Position, Renderable>([](exn::Entity entity, Position &position ,Renderable &renderable) {
-        char buffer[32];
-        //snprintf(buffer, 1, (char*)renderable.glyph);
-        snprintf(buffer, 6, "lalala");
-        b2Vec2 p1 =g_camera.ConvertWorldToScreen(b2Vec2(position.x,position.y));
+        char buffer[1];
+
+        snprintf(buffer, 1, (char*)(&renderable.glyph));
+        //snprintf(buffer, 6, "lalala");
+        b2Vec2 p1 = g_camera.ConvertWorldToScreen(b2Vec2(position.x,position.y));
 
         AddGfxCmdText(p1.x,g_camera.m_height-p1.y,TEXT_ALIGN_LEFT, buffer, WHITE);
     });
@@ -506,6 +487,7 @@ int main(int argc, char **argv) {
 
 	entityx::Entity entity = ex.entities.create();
 	entity.assign<Position>(1.0f, 2.0f);
+	entity.assign<BaseProperties>("food");
 	entity.assign<Edible>("food");
     entity.assign<Renderable>('F');
 
