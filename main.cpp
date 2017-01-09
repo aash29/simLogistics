@@ -52,7 +52,7 @@
 
 namespace exn = entityx;
 
-entityx::EntityX ex;
+
 
 //
 struct UIState {
@@ -275,11 +275,19 @@ static void sMouseButton(GLFWwindow *, int32 button, int32 action, int32 mods) {
                 currentCell.x=cx;
                 currentCell.y=cy;
 
+                /*
 				ImGui::OpenPopup("popup from button");
 				if (ImGui::BeginPopup("popup from button")) {
 					ImGui::MenuItem("New");
 					ImGui::EndPopup();
 				}
+                 */
+
+
+                ex.events.emit<MouseClickEvent>(MouseClickEvent(pw.x,pw.y));
+
+
+
 
             }
         }
@@ -395,11 +403,9 @@ static void sInterface() {
 
     ex.entities.each<Position, Renderable>([](exn::Entity entity, Position &position ,Renderable &renderable) {
         char buffer[1];
-
-        snprintf(buffer, 1, (char*)(&renderable.glyph));
+        snprintf(buffer, 4, (char*)(&renderable.glyph));
         //snprintf(buffer, 6, "lalala");
         b2Vec2 p1 = g_camera.ConvertWorldToScreen(b2Vec2(position.x,position.y));
-
         AddGfxCmdText(p1.x,g_camera.m_height-p1.y,TEXT_ALIGN_LEFT, buffer, WHITE);
     });
 
@@ -485,12 +491,25 @@ int main(int argc, char **argv) {
 
     glClearColor(0.3f, 0.3f, 0.3f, 1.f);
 
+
+
+    ex.systems.add<ClickResponseSystem>();
+    ex.systems.add<SerializationSystem>();
+    ex.systems.configure();
+
+
+    //SelectEvent se1();
+
+
 	entityx::Entity entity = ex.entities.create();
 	entity.assign<Position>(1.0f, 2.0f);
 	entity.assign<BaseProperties>("food");
 	entity.assign<Edible>("food");
     entity.assign<Renderable>('F');
 
+
+
+    ex.events.emit<SelectEvent>(entity);
 
 
 
@@ -501,6 +520,10 @@ int main(int argc, char **argv) {
         glViewport(0, 0, g_camera.m_width, g_camera.m_height);
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+
+        ImGui_ImplGlfwGL3_NewFrame();
+
 
         unsigned char mousebutton = 0;
         int mscroll = ui.scroll;
@@ -516,15 +539,16 @@ int main(int argc, char **argv) {
 
 
         glfwPollEvents();
-        ImGui_ImplGlfwGL3_NewFrame();
 
+        ex.systems.update<ClickResponseSystem>(1);
+        ex.systems.update<SerializationSystem>(1);
 
         // 1. Show a simple window
         // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
 
         //sSimulate();
 		drawSquare();
-		g_debugDraw.Flush();
+
 
         sInterface();
 		//glEnable(GL_DEPTH_TEST);
@@ -548,10 +572,12 @@ int main(int argc, char **argv) {
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
         glDisable(GL_DEPTH_TEST);
         RenderGLFlush(g_camera.m_width, g_camera.m_height);
+        g_debugDraw.Flush();
+
         ImGui::Render();
         glfwSwapBuffers(mainWindow);
 
-        glfwPollEvents();
+        //glfwPollEvents();
 
     }
 
