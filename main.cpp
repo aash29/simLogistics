@@ -128,126 +128,137 @@ static void sResizeWindow(GLFWwindow *, int width, int height) {
 
 //
 static void sKeyCallback(GLFWwindow *, int key, int scancode, int action, int mods) {
-    if (action == GLFW_PRESS) {
-        switch (key) {
+    ImGuiIO &io = ImGui::GetIO();
+    if (!io.WantCaptureKeyboard) {
+        if (action == GLFW_PRESS) {
+            switch (key) {
 
 
-            case GLFW_KEY_ENTER:
-                // Quit
-                test->EnterKeyDown();
-                break;
+                case GLFW_KEY_ESCAPE:
+                    // Quit
+                    glfwSetWindowShouldClose(mainWindow, GL_TRUE);
+                    break;
 
-            case GLFW_KEY_ESCAPE:
-                // Quit
-                glfwSetWindowShouldClose(mainWindow, GL_TRUE);
-                break;
+                case GLFW_KEY_LEFT:
+                    // Pan left
+                    if (mods == GLFW_MOD_CONTROL) {
+                        b2Vec2 newOrigin(2.0f, 0.0f);
+                        test->ShiftOrigin(newOrigin);
+                    }
+                    else {
+                        g_camera.m_center.x -= 0.5f;
+                    }
+                    break;
 
-            case GLFW_KEY_LEFT:
-                // Pan left
-                if (mods == GLFW_MOD_CONTROL) {
-                    b2Vec2 newOrigin(2.0f, 0.0f);
-                    test->ShiftOrigin(newOrigin);
-                }
-                else {
-                    g_camera.m_center.x -= 0.5f;
-                }
-                break;
+                case GLFW_KEY_RIGHT:
+                    // Pan right
+                    if (mods == GLFW_MOD_CONTROL) {
+                        b2Vec2 newOrigin(-2.0f, 0.0f);
+                        test->ShiftOrigin(newOrigin);
+                    }
+                    else {
+                        g_camera.m_center.x += 0.5f;
+                    }
+                    break;
 
-            case GLFW_KEY_RIGHT:
-                // Pan right
-                if (mods == GLFW_MOD_CONTROL) {
-                    b2Vec2 newOrigin(-2.0f, 0.0f);
-                    test->ShiftOrigin(newOrigin);
-                }
-                else {
-                    g_camera.m_center.x += 0.5f;
-                }
-                break;
+                case GLFW_KEY_DOWN:
+                    // Pan down
+                    if (mods == GLFW_MOD_CONTROL) {
+                        b2Vec2 newOrigin(0.0f, 2.0f);
+                        test->ShiftOrigin(newOrigin);
+                    }
+                    else {
+                        g_camera.m_center.y -= 0.5f;
+                    }
+                    break;
 
-            case GLFW_KEY_DOWN:
-                // Pan down
-                if (mods == GLFW_MOD_CONTROL) {
-                    b2Vec2 newOrigin(0.0f, 2.0f);
-                    test->ShiftOrigin(newOrigin);
-                }
-                else {
-                    g_camera.m_center.y -= 0.5f;
-                }
-                break;
+                case GLFW_KEY_UP:
+                    // Pan up
+                    if (mods == GLFW_MOD_CONTROL) {
+                        b2Vec2 newOrigin(0.0f, -2.0f);
+                        test->ShiftOrigin(newOrigin);
+                    }
+                    else {
+                        g_camera.m_center.y += 0.5f;
+                    }
+                    break;
 
-            case GLFW_KEY_UP:
-                // Pan up
-                if (mods == GLFW_MOD_CONTROL) {
-                    b2Vec2 newOrigin(0.0f, -2.0f);
-                    test->ShiftOrigin(newOrigin);
-                }
-                else {
-                    g_camera.m_center.y += 0.5f;
-                }
-                break;
+                case GLFW_KEY_HOME:
+                    // Reset view
+                    g_camera.m_zoom = 1.0f;
+                    g_camera.m_center.Set(0.0f, 20.0f);
+                    break;
 
-            case GLFW_KEY_HOME:
-                // Reset view
-                g_camera.m_zoom = 1.0f;
-                g_camera.m_center.Set(0.0f, 20.0f);
-                break;
+                case GLFW_KEY_Z:
+                    // Zoom out
+                    g_camera.m_zoom = b2Min(1.1f * g_camera.m_zoom, 20.0f);
+                    break;
 
-            case GLFW_KEY_Z:
-                // Zoom out
-                g_camera.m_zoom = b2Min(1.1f * g_camera.m_zoom, 20.0f);
-                break;
+                case GLFW_KEY_X:
+                    // Zoom in
+                    g_camera.m_zoom = b2Max(0.9f * g_camera.m_zoom, 0.02f);
+                    break;
 
-            case GLFW_KEY_X:
-                // Zoom in
-                g_camera.m_zoom = b2Max(0.9f * g_camera.m_zoom, 0.02f);
-                break;
-
-            case GLFW_KEY_R:
-                // Reset test
-                delete test;
-                test = entry->createFcn();
-                break;
+                case GLFW_KEY_R:
+                    // Reset test
+                    delete test;
+                    test = entry->createFcn();
+                    break;
 
 
-            case GLFW_KEY_SPACE:
-                // Pause
-                settings.pause = !settings.pause;
-                break;
+                case GLFW_KEY_SPACE:
+                    // Pause
+                    settings.pause = !settings.pause;
+                    break;
 
-            case GLFW_KEY_LEFT_BRACKET:
-                // Switch to previous test
-                --testSelection;
-                if (testSelection < 0) {
-                    testSelection = testCount - 1;
-                }
-                break;
+                case GLFW_KEY_LEFT_BRACKET:
+                    // Switch to previous test
+                    --testSelection;
+                    if (testSelection < 0) {
+                        testSelection = testCount - 1;
+                    }
+                    break;
 
-            case GLFW_KEY_RIGHT_BRACKET:
-                // Switch to next test
-                ++testSelection;
-                if (testSelection == testCount) {
-                    testSelection = 0;
-                }
-                break;
+                case GLFW_KEY_RIGHT_BRACKET:
+                    // Switch to next test
+                    ++testSelection;
+                    if (testSelection == testCount) {
+                        testSelection = 0;
+                    }
+                    break;
 
-            case GLFW_KEY_TAB:
-                ui.showMenu = !ui.showMenu;
+                case GLFW_KEY_TAB:
+                    ui.showMenu = !ui.showMenu;
 
-            default:
-                if (test) {
-                    test->Keyboard(key);
-                }
+                default:
+                    if (test) {
+                        test->Keyboard(key);
+                    }
+            }
+
         }
+            /*
+            if (action == GLFW_REPEAT) {
+                test->Keyboard(key);
+            }
+             */
+        else if (action == GLFW_RELEASE) {
+            test->KeyboardUp(key);
+        }
+    }
+    else {
+        if (action == GLFW_PRESS)
+            io.KeysDown[key] = true;
+        if (action == GLFW_RELEASE)
+            io.KeysDown[key] = false;
 
-    }
-    /*
-    if (action == GLFW_REPEAT) {
-        test->Keyboard(key);
-    }
-     */
-    else if (action == GLFW_RELEASE) {
-        test->KeyboardUp(key);
-    }
+        (void) mods; // Modifiers are not reliable across systems
+        io.KeyCtrl = io.KeysDown[GLFW_KEY_LEFT_CONTROL] || io.KeysDown[GLFW_KEY_RIGHT_CONTROL];
+        io.KeyShift = io.KeysDown[GLFW_KEY_LEFT_SHIFT] || io.KeysDown[GLFW_KEY_RIGHT_SHIFT];
+        io.KeyAlt = io.KeysDown[GLFW_KEY_LEFT_ALT] || io.KeysDown[GLFW_KEY_RIGHT_ALT];
+        io.KeySuper = io.KeysDown[GLFW_KEY_LEFT_SUPER] || io.KeysDown[GLFW_KEY_RIGHT_SUPER];
+    };
+
 
 }
 
@@ -257,62 +268,64 @@ static void sMouseButton(GLFWwindow *, int32 button, int32 action, int32 mods) {
     glfwGetCursorPos(mainWindow, &xd, &yd);
     b2Vec2 ps((float32) xd, (float32) yd);
 
-    // Use the mouse to move things around.
-    if (button == GLFW_MOUSE_BUTTON_1) {
-        //<##>
-        //ps.Set(0, 0);
-        b2Vec2 pw = g_camera.ConvertScreenToWorld(ps);
-        if (action == GLFW_PRESS) {
-            if (mods == GLFW_MOD_SHIFT) {
-                test->ShiftMouseDown(pw);
-            }
-            else {
-                test->MouseDown(pw);
+    ImGuiIO &io = ImGui::GetIO();
+    if (!io.WantCaptureMouse) {
 
-                int cx = floor(pw.x);
-                int cy = floor(pw.y);
-
-                currentCell.x=cx;
-                currentCell.y=cy;
-
-                /*
-				ImGui::OpenPopup("popup from button");
-				if (ImGui::BeginPopup("popup from button")) {
-					ImGui::MenuItem("New");
-					ImGui::EndPopup();
-				}
-                 */
-
-
-                ex.events.emit<MouseClickEvent>(MouseClickEvent(pw.x,pw.y));
-
-
-
-
-            }
-        }
-
-        if (action == GLFW_RELEASE) {
-            test->MouseUp(pw);
-        }
-    }
-    else if (button == GLFW_MOUSE_BUTTON_2) {
-        if (action == GLFW_PRESS) {
-            lastp = g_camera.ConvertScreenToWorld(ps);
-            rightMouseDown = true;
+        // Use the mouse to move things around.
+        if (button == GLFW_MOUSE_BUTTON_1) {
+            //<##>
+            //ps.Set(0, 0);
             b2Vec2 pw = g_camera.ConvertScreenToWorld(ps);
-            test->RightMouseDown(pw);
-        }
+            if (action == GLFW_PRESS) {
+                if (mods == GLFW_MOD_SHIFT) {
+                    test->ShiftMouseDown(pw);
+                }
+                else {
+                    test->MouseDown(pw);
 
-        if (action == GLFW_RELEASE) {
-            rightMouseDown = false;
-        }
-    }
-    else if (button == GLFW_MOUSE_BUTTON_3) {
-        b2Vec2 pw = g_camera.ConvertScreenToWorld(ps);
+                    int cx = floor(pw.x);
+                    int cy = floor(pw.y);
 
-        if (action == GLFW_PRESS) {
-            test->MiddleMouseDown(pw);
+                    currentCell.x = cx;
+                    currentCell.y = cy;
+
+                    /*
+                    ImGui::OpenPopup("popup from button");
+                    if (ImGui::BeginPopup("popup from button")) {
+                        ImGui::MenuItem("New");
+                        ImGui::EndPopup();
+                    }
+                     */
+
+
+                    ex.events.emit<MouseClickEvent>(MouseClickEvent(pw.x, pw.y));
+
+
+                }
+            }
+
+            if (action == GLFW_RELEASE) {
+                test->MouseUp(pw);
+            }
+        }
+        else if (button == GLFW_MOUSE_BUTTON_2) {
+            if (action == GLFW_PRESS) {
+                lastp = g_camera.ConvertScreenToWorld(ps);
+                rightMouseDown = true;
+                b2Vec2 pw = g_camera.ConvertScreenToWorld(ps);
+                test->RightMouseDown(pw);
+            }
+
+            if (action == GLFW_RELEASE) {
+                rightMouseDown = false;
+            }
+        }
+        else if (button == GLFW_MOUSE_BUTTON_3) {
+            b2Vec2 pw = g_camera.ConvertScreenToWorld(ps);
+
+            if (action == GLFW_PRESS) {
+                test->MiddleMouseDown(pw);
+            }
         }
     }
 
@@ -393,11 +406,14 @@ static void sInterface() {
 
 	ImGui::Text("Camera: %g,%g", g_camera.m_center.x, g_camera.m_center.y);
     ImGui::Text("Current cell: %d,%d", currentCell.x, currentCell.y);
+    static char str1[50];
+    ImGui::InputText("test",str1,IM_ARRAYSIZE(str1));
+
 
     ex.entities.each<Position, BaseProperties>([](exn::Entity entity, Position &position, BaseProperties &baseproperties) {
         if ((position.x==currentCell.x) && (position.y==currentCell.y))
         {
-            ImGui::Text(baseproperties.name.c_str());
+            //ImGui::Text(baseproperties.name.c_str());
         }
     });
 
@@ -454,6 +470,8 @@ int main(int argc, char **argv) {
     glfwSetScrollCallback(mainWindow, sScrollCallback);
     glfwSetWindowSizeCallback(mainWindow, sResizeWindow);
     glfwSetKeyCallback(mainWindow, sKeyCallback);
+    glfwSetCharCallback(mainWindow, ImGui_ImplGlfwGL3_CharCallback);
+
     //glfwSetInputMode(mainWindow, GLFW_STICKY_KEYS, 1);
     glfwSetMouseButtonCallback(mainWindow, sMouseButton);
     glfwSetCursorPosCallback(mainWindow, sMouseMotion);
@@ -472,15 +490,8 @@ int main(int argc, char **argv) {
 
     sCreateUI();
 
-    testCount = 0;
-    while (g_testEntries[testCount].createFcn != NULL) {
-        ++testCount;
-    }
 
-    testIndex = b2Clamp(testIndex, 0, testCount - 1);
-    testSelection = testIndex;
-
-    entry = g_testEntries + testIndex;
+    entry = g_testEntries;
     test = entry->createFcn();
 
     // Control the frame rate. One draw per monitor refresh.
@@ -503,13 +514,18 @@ int main(int argc, char **argv) {
 
 	entityx::Entity entity = ex.entities.create();
 	entity.assign<Position>(1.0f, 2.0f);
+
+    //static char* n1 = "food";
 	entity.assign<BaseProperties>("food");
 	entity.assign<Edible>("food");
     entity.assign<Renderable>('F');
 
 
+    entityx::Entity entity2 = ex.entities.create();
 
-    ex.events.emit<SelectEvent>(entity);
+
+
+    //ex.events.emit<SelectEvent>(entity);
 
 
 
@@ -521,7 +537,7 @@ int main(int argc, char **argv) {
 
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-
+        glfwPollEvents();
         ImGui_ImplGlfwGL3_NewFrame();
 
 
@@ -538,7 +554,7 @@ int main(int argc, char **argv) {
         int leftButton = glfwGetMouseButton(mainWindow, GLFW_MOUSE_BUTTON_LEFT);
 
 
-        glfwPollEvents();
+
 
         ex.systems.update<ClickResponseSystem>(1);
         ex.systems.update<SerializationSystem>(1);

@@ -13,11 +13,20 @@ struct Agent {
 		plan(plan) {}
 	std::vector<std::string> plan;
 };
+/*
+struct BaseProperties {
+	BaseProperties(char* name) :
+		name(name) {}
+	char* name;
+};
+ */
 
 struct BaseProperties {
-	BaseProperties(const std::string name) :
-		name(name) {}
-	std::string name;
+	BaseProperties(const char* nameInit)
+			 {
+					 strcpy(name,nameInit);
+			 }
+	char name[50];
 };
 
 
@@ -67,9 +76,23 @@ public:
 	}
 	void receive(const MouseClickEvent &mouseEvent) {
 		exn::ComponentHandle<Position> position;
-		entityx::EventManager em1;
 
-		ImGui::Text("alala");
+		int cx = floor(mouseEvent.x);
+		int cy = floor(mouseEvent.y);
+
+
+		ex.entities.each<Position, BaseProperties>([cx,cy](exn::Entity entity, Position &position, BaseProperties &baseproperties) {
+			if ((position.x==cx) && (position.y==cy))
+			{
+				ex.events.emit<SelectEvent>(entity);
+
+				//ImGui::Text(baseproperties.name.c_str());
+			}
+		});
+
+
+
+		//ImGui::Text("alala");
 		//em1.emit<SelectEvent>()
 
 		/*
@@ -86,12 +109,17 @@ public:
 
 class SerializationSystem : public exn::System<SerializationSystem>, public exn::Receiver<SerializationSystem> {
 public:
+
+	entityx::Entity targetEntity;
 	void configure(entityx::EventManager &event_manager)  {
 		event_manager.subscribe<SelectEvent>(*this);
 		//event_manager.subscribe<SelectEvent>(*this);
 	}
 
 	void receive(const SelectEvent &selectEvent) {
+
+		targetEntity=selectEvent.entity;
+
 		//ImGui::Text("alala");
 		//em1.emit<SelectEvent>()
 
@@ -104,7 +132,13 @@ public:
 	}
 
 	void update(entityx::EntityManager &es, entityx::EventManager &events, exn::TimeDelta dt) override {
-		ImGui::Text("alala");
+		if (targetEntity.id()!=targetEntity.INVALID){
+			if (targetEntity.has_component<BaseProperties>()) {
+				BaseProperties* b1 = targetEntity.component<BaseProperties>().get();
+				ImGui::InputText("name", b1->name, IM_ARRAYSIZE(b1->name));
+				//ImGui::Text(targetEntity.component<BaseProperties>().get()->name.c_str());
+			};
+		}
 	}
 
 };
