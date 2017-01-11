@@ -129,10 +129,12 @@ static void sResizeWindow(GLFWwindow *, int width, int height) {
 //
 static void sKeyCallback(GLFWwindow *, int key, int scancode, int action, int mods) {
     ImGuiIO &io = ImGui::GetIO();
+
     if (!io.WantCaptureKeyboard) {
         if (action == GLFW_PRESS) {
             switch (key) {
-
+                case GLFW_KEY_ENTER:
+                    break;
 
                 case GLFW_KEY_ESCAPE:
                     // Quit
@@ -237,16 +239,13 @@ static void sKeyCallback(GLFWwindow *, int key, int scancode, int action, int mo
             }
 
         }
-            /*
-            if (action == GLFW_REPEAT) {
-                test->Keyboard(key);
-            }
-             */
         else if (action == GLFW_RELEASE) {
             test->KeyboardUp(key);
         }
     }
-    else {
+
+
+    //if (io.WantCaptureKeyboard)
         if (action == GLFW_PRESS)
             io.KeysDown[key] = true;
         if (action == GLFW_RELEASE)
@@ -260,7 +259,7 @@ static void sKeyCallback(GLFWwindow *, int key, int scancode, int action, int mo
     };
 
 
-}
+//}
 
 //
 static void sMouseButton(GLFWwindow *, int32 button, int32 action, int32 mods) {
@@ -410,6 +409,7 @@ static void sInterface() {
     ImGui::InputText("test",str1,IM_ARRAYSIZE(str1));
 
 
+
     ex.entities.each<Position, BaseProperties>([](exn::Entity entity, Position &position, BaseProperties &baseproperties) {
         if ((position.x==currentCell.x) && (position.y==currentCell.y))
         {
@@ -467,11 +467,10 @@ int main(int argc, char **argv) {
     glfwMakeContextCurrent(mainWindow);
     printf("OpenGL %s, GLSL %s\n", glGetString(GL_VERSION), glGetString(GL_SHADING_LANGUAGE_VERSION));
 
-    glfwSetScrollCallback(mainWindow, sScrollCallback);
+
     glfwSetWindowSizeCallback(mainWindow, sResizeWindow);
     glfwSetKeyCallback(mainWindow, sKeyCallback);
     glfwSetCharCallback(mainWindow, ImGui_ImplGlfwGL3_CharCallback);
-
     //glfwSetInputMode(mainWindow, GLFW_STICKY_KEYS, 1);
     glfwSetMouseButtonCallback(mainWindow, sMouseButton);
     glfwSetCursorPosCallback(mainWindow, sMouseMotion);
@@ -506,6 +505,7 @@ int main(int argc, char **argv) {
 
     ex.systems.add<ClickResponseSystem>();
     ex.systems.add<SerializationSystem>();
+    ex.systems.add<ActionSystem>();
     ex.systems.configure();
 
 
@@ -525,7 +525,7 @@ int main(int argc, char **argv) {
 
 
 
-    //ex.events.emit<SelectEvent>(entity);
+    ex.events.emit<MoveEvent>(&entity,Position(1,1),Position(2,2));
 
 
 
@@ -539,6 +539,7 @@ int main(int argc, char **argv) {
 
         glfwPollEvents();
         ImGui_ImplGlfwGL3_NewFrame();
+
 
 
         unsigned char mousebutton = 0;

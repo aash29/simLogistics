@@ -7,6 +7,7 @@ entityx::EntityX ex;
 
 namespace exn = entityx;
 
+//  COMPONENTS
 
 struct Agent {
 	Agent(const std::vector<std::string> plan) :
@@ -52,6 +53,8 @@ struct Renderable
 	char glyph;
 };
 
+//EVENTS
+
 struct SelectEvent
 {
 	SelectEvent(entityx::Entity entity)
@@ -59,13 +62,22 @@ struct SelectEvent
 	entityx::Entity entity;
 };
 
-
 struct MouseClickEvent
 {
 	MouseClickEvent( const float x, float y)
 			: x(x), y(y) {}
 	float x, y;
 };
+
+struct MoveEvent
+{
+	MoveEvent(entityx::Entity actor, Position from, Position to):
+			actor(actor),from(from),to(to) {};
+	entityx::Entity actor;
+	Position from;
+	Position to;
+};
+
 
 
 
@@ -107,13 +119,26 @@ public:
 };
 
 
+class ActionSystem : public exn::System<ActionSystem>, public exn::Receiver<ActionSystem> {
+public:
+	void configure(entityx::EventManager &event_manager)  {
+		event_manager.subscribe<MoveEvent>(*this);
+	}
+
+	void update(entityx::EntityManager &es, entityx::EventManager &events, exn::TimeDelta dt) { }
+
+	void receive(const MoveEvent &moveevent) {
+		moveevent.actor.assign<Position>(moveevent.to);
+	}
+
+};
+
 class SerializationSystem : public exn::System<SerializationSystem>, public exn::Receiver<SerializationSystem> {
 public:
 
 	entityx::Entity targetEntity;
 	void configure(entityx::EventManager &event_manager)  {
 		event_manager.subscribe<SelectEvent>(*this);
-		//event_manager.subscribe<SelectEvent>(*this);
 	}
 
 	void receive(const SelectEvent &selectEvent) {
@@ -135,9 +160,29 @@ public:
 		if (targetEntity.id()!=targetEntity.INVALID){
 			if (targetEntity.has_component<BaseProperties>()) {
 				BaseProperties* b1 = targetEntity.component<BaseProperties>().get();
-				ImGui::InputText("name", b1->name, IM_ARRAYSIZE(b1->name));
-				//ImGui::Text(targetEntity.component<BaseProperties>().get()->name.c_str());
+				if (ImGui::TreeNode("BaseProperties")){
+					ImGui::InputText("name", b1->name, IM_ARRAYSIZE(b1->name));
+					ImGui::TreePop();
+				}
 			};
+
+			if (targetEntity.has_component<Position>()) {
+				Position* b1 = targetEntity.component<Position>().get();
+				if (ImGui::TreeNode("Position")) {
+					ImGui::InputInt("x", &(b1->x));
+					ImGui::InputInt("y", &(b1->y));
+					ImGui::TreePop();
+				}
+			};
+
+			if (targetEntity.has_component<Renderable>()) {
+				Renderable* b1 = targetEntity.component<Renderable>().get();
+				if (ImGui::TreeNode("Renderable")){
+					ImGui::InputText("glyph", &(b1->glyph), 2);
+					ImGui::TreePop();
+				}
+			};
+
 		}
 	}
 
