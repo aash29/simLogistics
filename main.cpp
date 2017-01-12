@@ -513,19 +513,22 @@ int main(int argc, char **argv) {
 
 
 	entityx::Entity entity = ex.entities.create();
-	entity.assign<Position>(1.0f, 2.0f);
-
-    //static char* n1 = "food";
-	entity.assign<BaseProperties>("food");
+    entity.assign<BaseProperties>("food",true);
+    entity.assign<Position>(1.0f, 2.0f);
 	entity.assign<Edible>("food");
     entity.assign<Renderable>('F');
 
 
-    entityx::Entity entity2 = ex.entities.create();
+    entityx::Entity door = ex.entities.create();
+    door.assign<Position>(0.0f, 0.0f);
+    door.assign<BaseProperties>("door",false);
+    door.assign<Renderable>('C');
 
 
 
-    ex.events.emit<MoveEvent>(&entity,Position(1,1),Position(2,2));
+    ex.events.emit<MoveEvent>(entity,Position(1,1),Position(2,2));
+
+    ex.events.emit<OpenEvent>(door,door);
 
 
 
@@ -559,6 +562,8 @@ int main(int argc, char **argv) {
 
         ex.systems.update<ClickResponseSystem>(1);
         ex.systems.update<SerializationSystem>(1);
+        ex.systems.update<ActionSystem>(1);
+
 
         // 1. Show a simple window
         // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"

@@ -23,11 +23,14 @@ struct BaseProperties {
  */
 
 struct BaseProperties {
-	BaseProperties(const char* nameInit)
+	BaseProperties(const char* nameInit, bool passable)
 			 {
-					 strcpy(name,nameInit);
+				 strcpy(name,nameInit);
+				 passable=true;
+
 			 }
 	char name[50];
+	bool passable;
 };
 
 
@@ -69,6 +72,8 @@ struct MouseClickEvent
 	float x, y;
 };
 
+
+//ACTIONS
 struct MoveEvent
 {
 	MoveEvent(entityx::Entity actor, Position from, Position to):
@@ -76,6 +81,15 @@ struct MoveEvent
 	entityx::Entity actor;
 	Position from;
 	Position to;
+};
+
+struct OpenEvent
+{
+	OpenEvent(entityx::Entity actor,entityx::Entity target):
+			actor(actor),target(target) {};
+	entityx::Entity actor;
+	entityx::Entity target;
+
 };
 
 
@@ -123,12 +137,29 @@ class ActionSystem : public exn::System<ActionSystem>, public exn::Receiver<Acti
 public:
 	void configure(entityx::EventManager &event_manager)  {
 		event_manager.subscribe<MoveEvent>(*this);
+		event_manager.subscribe<OpenEvent>(*this);
 	}
 
-	void update(entityx::EntityManager &es, entityx::EventManager &events, exn::TimeDelta dt) { }
+	void update(entityx::EntityManager &es, entityx::EventManager &events, exn::TimeDelta dt) {
+		ImGui::Begin("Actions");
+		ImGui::End();
+	}
 
 	void receive(const MoveEvent &moveevent) {
-		moveevent.actor.assign<Position>(moveevent.to);
+		//ex::ComponentHandle<Body> body = moveevent.actor.component<Body>();
+		entityx::Entity a1 = moveevent.actor;
+
+		a1.remove<Position>();
+		a1.assign_from_copy<Position>(moveevent.to);
+	}
+
+	void receive(const OpenEvent &openevent) {
+		//ex::ComponentHandle<Body> body = moveevent.actor.component<Body>();
+		entityx::Entity t1 = openevent.target;
+		bool openstate = t1.component<BaseProperties>().get()->passable;
+		t1.component<BaseProperties>().get()->passable=!openstate;
+		t1.component<Renderable>().get()->glyph=openstate ? 'C':'O';
+		//entityx::Entity a1 = moveevent.actor;
 	}
 
 };
@@ -162,6 +193,7 @@ public:
 				BaseProperties* b1 = targetEntity.component<BaseProperties>().get();
 				if (ImGui::TreeNode("BaseProperties")){
 					ImGui::InputText("name", b1->name, IM_ARRAYSIZE(b1->name));
+					ImGui::Checkbox("Passable",&(b1->passable));
 					ImGui::TreePop();
 				}
 			};
