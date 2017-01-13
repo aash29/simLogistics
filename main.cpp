@@ -425,6 +425,8 @@ static void sInterface() {
         AddGfxCmdText(p1.x,g_camera.m_height-p1.y,TEXT_ALIGN_LEFT, buffer, WHITE);
     });
 
+    AppLog::instance()->Draw("simlog");
+
 
     ImGui::End();
 
@@ -509,8 +511,7 @@ int main(int argc, char **argv) {
     ex.systems.configure();
 
 
-    //SelectEvent se1();
-
+    ex.systems.add<entityx::deps::Dependency<BaseProperties, Position, Renderable>>();
 
 	entityx::Entity entity = ex.entities.create();
     entity.assign<BaseProperties>("food",true);
@@ -526,9 +527,9 @@ int main(int argc, char **argv) {
 
 
 
-    ex.events.emit<MoveEvent>(entity,Position(1,1),Position(2,2));
+    ex.events.emit<MoveEvent>(entity,Position(1,1),Position(0,0));
 
-    ex.events.emit<OpenEvent>(door,door);
+    //ex.events.emit<OpenEvent>(door,door);
 
 
 
@@ -568,17 +569,9 @@ int main(int argc, char **argv) {
         // 1. Show a simple window
         // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug"
 
-        //sSimulate();
 		drawSquare();
 
-
         sInterface();
-		//glEnable(GL_DEPTH_TEST);
-
-		//
-
-
-		//glDisable(GL_DEPTH_TEST);
 
         // Measure speed
         double time2 = glfwGetTime();

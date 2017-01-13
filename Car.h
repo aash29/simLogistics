@@ -729,7 +729,7 @@ public:
 
         ImGui::Text("bots in goal: %d", victoryCount);
 
-        coinsLog.Draw("Log");
+        //coinsLog.Draw("Log");
 
 
 
@@ -1011,7 +1011,7 @@ public:
 	bool pause = false;
 	Settings* settings;
 
-    AppLog coinsLog;
+    //AppLog coinsLog;
 };
 
 #endif

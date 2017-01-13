@@ -2,8 +2,11 @@
 #define GAMELOGIC_H
 
 #include "entityx/entityx.h"
+#include "entityx/deps/Dependencies.h"
+#include "coinsLog.h"
 
 entityx::EntityX ex;
+
 
 namespace exn = entityx;
 
@@ -23,10 +26,10 @@ struct BaseProperties {
  */
 
 struct BaseProperties {
-	BaseProperties(const char* nameInit, bool passable)
+	BaseProperties(const char* nameInit, bool init_passable)
 			 {
 				 strcpy(name,nameInit);
-				 passable=true;
+				 passable=init_passable;
 
 			 }
 	char name[50];
@@ -37,6 +40,12 @@ struct BaseProperties {
 struct Position {
 	Position(const int x, const int y)
 		: x(x), y(y) {}
+	Position()
+	{
+		x=0;
+		y=0;
+	};
+
 	int x;
 	int y;
 };
@@ -145,12 +154,34 @@ public:
 		ImGui::End();
 	}
 
-	void receive(const MoveEvent &moveevent) {
-		//ex::ComponentHandle<Body> body = moveevent.actor.component<Body>();
-		entityx::Entity a1 = moveevent.actor;
+	bool isPassable(int x, int y)
+	{
+		bool result = true;
+		ex.entities.each<Position, BaseProperties>([x,y,&result](exn::Entity entity, Position &position, BaseProperties &baseproperties) {
 
-		a1.remove<Position>();
-		a1.assign_from_copy<Position>(moveevent.to);
+			if ((position.x==x) && (position.y==y))
+			{
+				if (!baseproperties.passable)
+				{
+					result = false;
+				}
+			}
+		});
+		return result;
+	}
+
+	void receive(const MoveEvent &moveevent) {
+			//preconditions
+		if (isPassable(moveevent.to.x,moveevent.to.y))
+		{
+			entityx::Entity a1 = moveevent.actor;
+			a1.remove<Position>();
+			a1.assign_from_copy<Position>(moveevent.to);
+		} else
+			//effects
+		{
+			AppLog::instance()->AddLog("Move to (%d,%d) impossible",moveevent.to.x,moveevent.to.y);
+		}
 	}
 
 	void receive(const OpenEvent &openevent) {

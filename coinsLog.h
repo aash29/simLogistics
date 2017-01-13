@@ -7,12 +7,18 @@
 
 
 
-struct AppLog
+class AppLog
 {
+public:
     ImGuiTextBuffer     Buf;
     ImGuiTextFilter     Filter;
     ImVector<int>       LineOffsets;        // Index to lines offset
     bool                ScrollToBottom;
+
+    static AppLog* instance() {
+        static AppLog inst;
+        return &inst;
+    }
 
     void    Clear()     { Buf.clear(); LineOffsets.clear(); }
 
@@ -65,6 +71,8 @@ struct AppLog
         ImGui::EndChild();
         ImGui::End();
     }
+private:
+    AppLog() {}
 };
 
 
