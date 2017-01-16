@@ -26,4 +26,4 @@ find_package(entityx)
 find_package(PkgConfig REQUIRED)
 pkg_search_module(GLFW REQUIRED glfw3)
 
-target_link_libraries(swarm GLEW; OpenGL; glfw ; Box2D; entityx)
+target_link_libraries(swarm GLEW; OpenGL; glfw ; Box2D; entityx-d)

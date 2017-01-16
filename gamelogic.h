@@ -12,11 +12,7 @@ namespace exn = entityx;
 
 //  COMPONENTS
 
-struct Agent {
-	Agent(const std::vector<std::string> plan) :
-		plan(plan) {}
-	std::vector<std::string> plan;
-};
+
 /*
 struct BaseProperties {
 	BaseProperties(char* name) :
@@ -60,21 +56,32 @@ struct Edible {
 
 struct Renderable
 {
-	Renderable(const char glyph)
-		: glyph(glyph) {}
-	char glyph;
+	Renderable(const char* glyph_init)
+	{
+		strcpy(glyph,glyph_init);
+	}
+	Renderable()
+	{
+		strcpy(glyph,"U");
+	}
+	char glyph[2];
 };
 
 //EVENTS
 
-struct SelectEvent
+class GameEvent
+{
+
+};
+
+struct SelectEvent : GameEvent
 {
 	SelectEvent(entityx::Entity entity)
 	: entity(entity) {}
 	entityx::Entity entity;
 };
 
-struct MouseClickEvent
+struct MouseClickEvent :GameEvent
 {
 	MouseClickEvent( const float x, float y)
 			: x(x), y(y) {}
@@ -83,8 +90,9 @@ struct MouseClickEvent
 
 
 //ACTIONS
-struct MoveEvent
+class MoveEvent : public GameEvent
 {
+public:
 	MoveEvent(entityx::Entity actor, Position from, Position to):
 			actor(actor),from(from),to(to) {};
 	entityx::Entity actor;
@@ -92,7 +100,7 @@ struct MoveEvent
 	Position to;
 };
 
-struct OpenEvent
+struct OpenEvent :GameEvent
 {
 	OpenEvent(entityx::Entity actor,entityx::Entity target):
 			actor(actor),target(target) {};
@@ -101,7 +109,13 @@ struct OpenEvent
 
 };
 
-
+struct Agent {
+	Agent()
+	{
+		plan=std::vector<GameEvent>();
+	};
+	std::vector<GameEvent> plan;
+};
 
 
 class ClickResponseSystem : public exn::System<ClickResponseSystem>, public exn::Receiver<ClickResponseSystem> {
@@ -147,6 +161,7 @@ public:
 	void configure(entityx::EventManager &event_manager)  {
 		event_manager.subscribe<MoveEvent>(*this);
 		event_manager.subscribe<OpenEvent>(*this);
+		//event_manager.subscribe<Event>(*this);
 	}
 
 	void update(entityx::EntityManager &es, entityx::EventManager &events, exn::TimeDelta dt) {
@@ -177,10 +192,11 @@ public:
 			entityx::Entity a1 = moveevent.actor;
 			a1.remove<Position>();
 			a1.assign_from_copy<Position>(moveevent.to);
+			AppLog::instance()->AddLog("Moved from (%d,%d) to (%d,%d) \n",moveevent.from.x,moveevent.from.y,moveevent.to.x,moveevent.to.y);
 		} else
 			//effects
 		{
-			AppLog::instance()->AddLog("Move to (%d,%d) impossible",moveevent.to.x,moveevent.to.y);
+			AppLog::instance()->AddLog("Move to (%d,%d) impossible \n",moveevent.to.x,moveevent.to.y);
 		}
 	}
 
@@ -189,7 +205,16 @@ public:
 		entityx::Entity t1 = openevent.target;
 		bool openstate = t1.component<BaseProperties>().get()->passable;
 		t1.component<BaseProperties>().get()->passable=!openstate;
-		t1.component<Renderable>().get()->glyph=openstate ? 'C':'O';
+		if (openstate==true)
+		{
+			strcpy(t1.component<Renderable>().get()->glyph,"O");
+		}
+		else
+		{
+			strcpy(t1.component<Renderable>().get()->glyph,"C");
+		}
+
+		//t1.component<Renderable>().get()->glyph=openstate ? "C":"O";
 		//entityx::Entity a1 = moveevent.actor;
 	}
 
@@ -241,7 +266,7 @@ public:
 			if (targetEntity.has_component<Renderable>()) {
 				Renderable* b1 = targetEntity.component<Renderable>().get();
 				if (ImGui::TreeNode("Renderable")){
-					ImGui::InputText("glyph", &(b1->glyph), 2);
+					ImGui::InputText("glyph", b1->glyph, 2);
 					ImGui::TreePop();
 				}
 			};

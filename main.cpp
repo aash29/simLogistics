@@ -120,6 +120,15 @@ void drawSquare()
 
 }
 
+
+void spawnWall(int x, int y)
+{
+    entityx::Entity w1 = ex.entities.create();
+    w1.assign<BaseProperties>("wall",false);
+    w1.assign<Position>(x, y);
+    w1.assign<Renderable>("W");
+}
+
 //
 static void sResizeWindow(GLFWwindow *, int width, int height) {
     g_camera.m_width = width;
@@ -258,9 +267,6 @@ static void sKeyCallback(GLFWwindow *, int key, int scancode, int action, int mo
         io.KeySuper = io.KeysDown[GLFW_KEY_LEFT_SUPER] || io.KeysDown[GLFW_KEY_RIGHT_SUPER];
     };
 
-
-//}
-
 //
 static void sMouseButton(GLFWwindow *, int32 button, int32 action, int32 mods) {
     double xd, yd;
@@ -368,17 +374,7 @@ static void sSimulate() {
 
     test->DrawTitle(entry->name);
 
-    //((Car *) test)->plotGraphs();
     glDisable(GL_DEPTH_TEST);
-
-    if (testSelection != testIndex) {
-        testIndex = testSelection;
-        delete test;
-        entry = g_testEntries + testIndex;
-        test = entry->createFcn();
-        g_camera.m_zoom = 1.0f;
-        g_camera.m_center.Set(0.0f, 20.0f);
-    }
 }
 
 //
@@ -387,15 +383,6 @@ static void sInterface() {
     bool show_another_window = true;
     int menuWidth = 200;
     ui.mouseOverMenu = false;
-    /*
-    if (ui.showMenu) {
-        ImGui::SetNextWindowSize(ImVec2(200, 100), ImGuiSetCond_FirstUseEver);
-        ImGui::Begin("Another Window", &show_another_window);
-        ImGui::Text("Hello");
-        ImGui::End();
-    }
-     */
-
 
     ImGui::SetNextWindowSize(ImVec2(250, 250), ImGuiSetCond_FirstUseEver);
     bool over = ImGui::Begin("Testbed Controls");
@@ -508,22 +495,34 @@ int main(int argc, char **argv) {
     ex.systems.add<ClickResponseSystem>();
     ex.systems.add<SerializationSystem>();
     ex.systems.add<ActionSystem>();
+
+    //ex.systems.add<entityx::deps::Dependency<BaseProperties, Position, Renderable>>();
+
     ex.systems.configure();
 
 
-    ex.systems.add<entityx::deps::Dependency<BaseProperties, Position, Renderable>>();
-
 	entityx::Entity entity = ex.entities.create();
     entity.assign<BaseProperties>("food",true);
-    entity.assign<Position>(1.0f, 2.0f);
+    entity.assign<Position>(0, -1);
 	entity.assign<Edible>("food");
-    entity.assign<Renderable>('F');
+    entity.assign<Renderable>("F");
 
 
     entityx::Entity door = ex.entities.create();
-    door.assign<Position>(0.0f, 0.0f);
+    door.assign<Position>(0, 0);
     door.assign<BaseProperties>("door",false);
-    door.assign<Renderable>('C');
+    door.assign<Renderable>("C");
+
+
+    spawnWall(1,0);
+    spawnWall(1,-1);
+    spawnWall(1,-2);
+    spawnWall(0,-2);
+    spawnWall(-1,-2);
+    spawnWall(-1,-1);
+    spawnWall(-1,0);
+    //w1.component<Position>().get()->x=1;
+
 
 
 
@@ -532,7 +531,16 @@ int main(int argc, char **argv) {
     //ex.events.emit<OpenEvent>(door,door);
 
 
+    entityx::Entity agent = ex.entities.create();
+    agent.assign<BaseProperties>("agent",true);
+    agent.assign<Position>(0, 5);
+    agent.assign<Renderable>("A");
+    agent.assign<Agent>();
 
+    const MoveEvent m1 = MoveEvent(agent,Position(5,0),Position(5,1));
+    agent.component<Agent>().get()->plan.push_back(m1);
+
+    ex.events.emit<GameEvent>(m1);
 
 
     while (!glfwWindowShouldClose(mainWindow)) {
