@@ -540,7 +540,31 @@ int main(int argc, char **argv) {
     const MoveEvent m1 = MoveEvent(agent,Position(5,0),Position(5,1));
     agent.component<Agent>().get()->plan.push_back(m1);
 
-    ex.events.emit<GameEvent>(m1);
+    //ex.events.emit<GameEvent>(m1);
+
+    //Channel::broadcast(agent.component<Agent>().get()->plan.begin());
+
+    static event_dispatcher events;
+
+    events.listen("move",
+                  [] (MoveEvent moveevent)
+                  {
+                      if (isPassable(moveevent.to.x,moveevent.to.y))
+                      {
+                          entityx::Entity a1 = moveevent.actor;
+                          a1.remove<Position>();
+                          a1.assign_from_copy<Position>(moveevent.to);
+                          AppLog::instance()->AddLog("Moved from (%d,%d) to (%d,%d) \n",moveevent.from.x,moveevent.from.y,moveevent.to.x,moveevent.to.y);
+                      } else
+                          //effects
+                      {
+                          AppLog::instance()->AddLog("Move to (%d,%d) impossible \n",moveevent.to.x,moveevent.to.y);
+                      }
+
+                  });
+
+
+    events.fire("move", agent.component<Agent>().get()->plan[0]);
 
 
     while (!glfwWindowShouldClose(mainWindow)) {

@@ -4,6 +4,8 @@
 #include "entityx/entityx.h"
 #include "entityx/deps/Dependencies.h"
 #include "coinsLog.h"
+#include "eventqueue.h"
+#include "lambdaevents.h"
 
 entityx::EntityX ex;
 
@@ -67,6 +69,24 @@ struct Renderable
 	char glyph[2];
 };
 
+
+
+bool isPassable(int x, int y)
+{
+	bool result = true;
+	ex.entities.each<Position, BaseProperties>([x,y,&result](exn::Entity entity, Position &position, BaseProperties &baseproperties) {
+
+		if ((position.x==x) && (position.y==y))
+		{
+			if (!baseproperties.passable)
+			{
+				result = false;
+			}
+		}
+	});
+	return result;
+}
+
 //EVENTS
 
 class GameEvent
@@ -99,6 +119,24 @@ public:
 	Position from;
 	Position to;
 };
+
+
+struct MoveEventHandler {
+	void operator()(const MoveEvent& moveevent) {
+		if (isPassable(moveevent.to.x,moveevent.to.y))
+		{
+			entityx::Entity a1 = moveevent.actor;
+			a1.remove<Position>();
+			a1.assign_from_copy<Position>(moveevent.to);
+			AppLog::instance()->AddLog("Moved from (%d,%d) to (%d,%d) \n",moveevent.from.x,moveevent.from.y,moveevent.to.x,moveevent.to.y);
+		} else
+			//effects
+		{
+			AppLog::instance()->AddLog("Move to (%d,%d) impossible \n",moveevent.to.x,moveevent.to.y);
+		}
+	}
+};
+
 
 struct OpenEvent :GameEvent
 {
@@ -161,6 +199,9 @@ public:
 	void configure(entityx::EventManager &event_manager)  {
 		event_manager.subscribe<MoveEvent>(*this);
 		event_manager.subscribe<OpenEvent>(*this);
+		static MoveEventHandler mvh;
+		Channel::add<MoveEvent>(&mvh);
+
 		//event_manager.subscribe<Event>(*this);
 	}
 
@@ -169,21 +210,7 @@ public:
 		ImGui::End();
 	}
 
-	bool isPassable(int x, int y)
-	{
-		bool result = true;
-		ex.entities.each<Position, BaseProperties>([x,y,&result](exn::Entity entity, Position &position, BaseProperties &baseproperties) {
 
-			if ((position.x==x) && (position.y==y))
-			{
-				if (!baseproperties.passable)
-				{
-					result = false;
-				}
-			}
-		});
-		return result;
-	}
 
 	void receive(const MoveEvent &moveevent) {
 			//preconditions
