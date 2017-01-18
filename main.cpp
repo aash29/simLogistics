@@ -537,13 +537,19 @@ int main(int argc, char **argv) {
     agent.assign<Renderable>("A");
     agent.assign<Agent>();
 
-    const MoveEvent m1 = MoveEvent(agent,Position(5,0),Position(5,1));
-    agent.component<Agent>().get()->plan.push_back(m1);
+    MoveEvent* m1 = new MoveEvent(agent,Position(5,0),Position(5,1));
+    agent.component<Agent>().get()->plan.push_back(new MoveEvent(agent,Position(5,0),Position(5,1)));
 
-    //ex.events.emit<GameEvent>(m1);
+    //ex.events.emit<>(m1);
 
-    //Channel::broadcast(agent.component<Agent>().get()->plan.begin());
+    static MoveEventHandler mvh;
+    Channel::add<MoveEvent*>(&mvh);
 
+    std::vector<GameEvent*> v0;
+    v0.push_back(m1);
+
+    Channel::broadcast(v0[0]);
+/*
     static event_dispatcher events;
 
     events.listen("move",
@@ -563,8 +569,17 @@ int main(int argc, char **argv) {
 
                   });
 
+*/
+    //events.fire("move", agent.component<Agent>().get()->plan[0]);
 
-    events.fire("move", agent.component<Agent>().get()->plan[0]);
+    std::vector<GameEvent*> v1;
+    v1.push_back(new MoveEvent(agent,Position(5,0),Position(5,1)));
+    v1[0]->execute();
+
+    //agent.component<Agent>().get()->plan[0]->execute(*m1);
+    //m1->execute(*m1);
+
+
 
 
     while (!glfwWindowShouldClose(mainWindow)) {

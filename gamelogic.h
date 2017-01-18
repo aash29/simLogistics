@@ -91,7 +91,8 @@ bool isPassable(int x, int y)
 
 class GameEvent
 {
-
+public:
+virtual void execute()=0;
 };
 
 struct SelectEvent : GameEvent
@@ -99,6 +100,9 @@ struct SelectEvent : GameEvent
 	SelectEvent(entityx::Entity entity)
 	: entity(entity) {}
 	entityx::Entity entity;
+
+	virtual void execute()
+	{};
 };
 
 struct MouseClickEvent :GameEvent
@@ -106,33 +110,48 @@ struct MouseClickEvent :GameEvent
 	MouseClickEvent( const float x, float y)
 			: x(x), y(y) {}
 	float x, y;
+	virtual void execute()
+	{};
 };
 
 
 //ACTIONS
-class MoveEvent : public GameEvent
-{
+class MoveEvent : public GameEvent {
 public:
-	MoveEvent(entityx::Entity actor, Position from, Position to):
-			actor(actor),from(from),to(to) {};
+	MoveEvent(entityx::Entity actor, Position from, Position to) :
+			actor(actor), from(from), to(to) { };
 	entityx::Entity actor;
 	Position from;
 	Position to;
-};
-
-
-struct MoveEventHandler {
-	void operator()(const MoveEvent& moveevent) {
-		if (isPassable(moveevent.to.x,moveevent.to.y))
-		{
-			entityx::Entity a1 = moveevent.actor;
+	 //using GameEvent::execute;
+	 virtual void execute() {
+		//preconditions
+		if (isPassable(to.x, to.y)) {
+			entityx::Entity a1 = actor;
 			a1.remove<Position>();
-			a1.assign_from_copy<Position>(moveevent.to);
-			AppLog::instance()->AddLog("Moved from (%d,%d) to (%d,%d) \n",moveevent.from.x,moveevent.from.y,moveevent.to.x,moveevent.to.y);
+			a1.assign_from_copy<Position>(to);
+			AppLog::instance()->AddLog("Moved from (%d,%d) to (%d,%d) \n", from.x, from.y,
+									   to.x, to.y);
 		} else
 			//effects
 		{
-			AppLog::instance()->AddLog("Move to (%d,%d) impossible \n",moveevent.to.x,moveevent.to.y);
+			AppLog::instance()->AddLog("Move to (%d,%d) impossible \n", to.x, to.y);
+		}
+	}
+};
+
+struct MoveEventHandler {
+	void operator()(const MoveEvent* moveevent) {
+		if (isPassable(moveevent->to.x,moveevent->to.y))
+		{
+			entityx::Entity a1 = moveevent->actor;
+			a1.remove<Position>();
+			a1.assign_from_copy<Position>(moveevent->to);
+			AppLog::instance()->AddLog("Moved from (%d,%d) to (%d,%d) \n",moveevent->from.x,moveevent->from.y,moveevent->to.x,moveevent->to.y);
+		} else
+			//effects
+		{
+			AppLog::instance()->AddLog("Move to (%d,%d) impossible \n",moveevent->to.x,moveevent->to.y);
 		}
 	}
 };
@@ -150,9 +169,9 @@ struct OpenEvent :GameEvent
 struct Agent {
 	Agent()
 	{
-		plan=std::vector<GameEvent>();
+		plan=std::vector<GameEvent*>();
 	};
-	std::vector<GameEvent> plan;
+	std::vector<GameEvent*> plan;
 };
 
 
@@ -199,8 +218,6 @@ public:
 	void configure(entityx::EventManager &event_manager)  {
 		event_manager.subscribe<MoveEvent>(*this);
 		event_manager.subscribe<OpenEvent>(*this);
-		static MoveEventHandler mvh;
-		Channel::add<MoveEvent>(&mvh);
 
 		//event_manager.subscribe<Event>(*this);
 	}
@@ -213,18 +230,20 @@ public:
 
 
 	void receive(const MoveEvent &moveevent) {
+		/*
 			//preconditions
-		if (isPassable(moveevent.to.x,moveevent.to.y))
+		if (isPassable(moveevent->to.x,moveevent->to.y))
 		{
-			entityx::Entity a1 = moveevent.actor;
+			entityx::Entity a1 = moveevent->actor;
 			a1.remove<Position>();
-			a1.assign_from_copy<Position>(moveevent.to);
-			AppLog::instance()->AddLog("Moved from (%d,%d) to (%d,%d) \n",moveevent.from.x,moveevent.from.y,moveevent.to.x,moveevent.to.y);
+			a1.assign_from_copy<Position>(moveevent->to);
+			AppLog::instance()->AddLog("Moved from (%d,%d) to (%d,%d) \n",moveevent->from.x,moveevent->from.y,moveevent->to.x,moveevent->to.y);
 		} else
 			//effects
 		{
-			AppLog::instance()->AddLog("Move to (%d,%d) impossible \n",moveevent.to.x,moveevent.to.y);
+			AppLog::instance()->AddLog("Move to (%d,%d) impossible \n",moveevent->to.x,moveevent->to.y);
 		}
+		 */
 	}
 
 	void receive(const OpenEvent &openevent) {
