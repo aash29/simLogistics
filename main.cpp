@@ -521,14 +521,6 @@ int main(int argc, char **argv) {
     spawnWall(-1,-2);
     spawnWall(-1,-1);
     spawnWall(-1,0);
-    //w1.component<Position>().get()->x=1;
-
-
-
-
-    ex.events.emit<MoveEvent>(entity,Position(1,1),Position(0,0));
-
-    //ex.events.emit<OpenEvent>(door,door);
 
 
     entityx::Entity agent = ex.entities.create();
@@ -537,49 +529,16 @@ int main(int argc, char **argv) {
     agent.assign<Renderable>("A");
     agent.assign<Agent>();
 
-    MoveEvent* m1 = new MoveEvent(agent,Position(5,0),Position(5,1));
-    agent.component<Agent>().get()->plan.push_back(new MoveEvent(agent,Position(5,0),Position(5,1)));
 
-    //ex.events.emit<>(m1);
+    agent.component<Agent>().get()->plan.push_back(new MoveAction(agent,Position(0,5),Position(0,4)));
+    agent.component<Agent>().get()->plan.push_back(new MoveAction(agent,Position(0,4),Position(0,3)));
+    agent.component<Agent>().get()->plan.push_back(new MoveAction(agent,Position(0,3),Position(0,2)));
+    agent.component<Agent>().get()->plan.push_back(new MoveAction(agent,Position(0,2),Position(0,1)));
+    agent.component<Agent>().get()->plan.push_back(new OpenAction(agent,door));
+    //ex.events.emit<ActionEvent>(agent.component<Agent>().get());
 
-    static MoveEventHandler mvh;
-    Channel::add<MoveEvent*>(&mvh);
-
-    std::vector<GameEvent*> v0;
-    v0.push_back(m1);
-
-    Channel::broadcast(v0[0]);
-/*
-    static event_dispatcher events;
-
-    events.listen("move",
-                  [] (MoveEvent moveevent)
-                  {
-                      if (isPassable(moveevent.to.x,moveevent.to.y))
-                      {
-                          entityx::Entity a1 = moveevent.actor;
-                          a1.remove<Position>();
-                          a1.assign_from_copy<Position>(moveevent.to);
-                          AppLog::instance()->AddLog("Moved from (%d,%d) to (%d,%d) \n",moveevent.from.x,moveevent.from.y,moveevent.to.x,moveevent.to.y);
-                      } else
-                          //effects
-                      {
-                          AppLog::instance()->AddLog("Move to (%d,%d) impossible \n",moveevent.to.x,moveevent.to.y);
-                      }
-
-                  });
-
-*/
-    //events.fire("move", agent.component<Agent>().get()->plan[0]);
-
-    std::vector<GameEvent*> v1;
-    v1.push_back(new MoveEvent(agent,Position(5,0),Position(5,1)));
-    v1[0]->execute();
-
-    //agent.component<Agent>().get()->plan[0]->execute(*m1);
-    //m1->execute(*m1);
-
-
+    //OpenAction a1(agent,door);
+    //a1.execute();
 
 
     while (!glfwWindowShouldClose(mainWindow)) {

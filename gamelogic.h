@@ -89,36 +89,44 @@ bool isPassable(int x, int y)
 
 //EVENTS
 
-class GameEvent
+class Action
 {
 public:
 virtual void execute()=0;
 };
 
-struct SelectEvent : GameEvent
+struct SelectEvent
 {
 	SelectEvent(entityx::Entity entity)
 	: entity(entity) {}
 	entityx::Entity entity;
 
-	virtual void execute()
-	{};
 };
 
-struct MouseClickEvent :GameEvent
+struct MouseClickEvent
 {
 	MouseClickEvent( const float x, float y)
 			: x(x), y(y) {}
 	float x, y;
-	virtual void execute()
-	{};
+};
+
+struct Agent;
+
+struct ActionEvent
+{
+	ActionEvent( Agent* init_agent)
+			{
+				agent=init_agent;
+			}
+	Agent* agent;
 };
 
 
+
 //ACTIONS
-class MoveEvent : public GameEvent {
+class MoveAction : public Action {
 public:
-	MoveEvent(entityx::Entity actor, Position from, Position to) :
+	MoveAction(entityx::Entity actor, Position from, Position to) :
 			actor(actor), from(from), to(to) { };
 	entityx::Entity actor;
 	Position from;
@@ -140,38 +148,39 @@ public:
 	}
 };
 
-struct MoveEventHandler {
-	void operator()(const MoveEvent* moveevent) {
-		if (isPassable(moveevent->to.x,moveevent->to.y))
-		{
-			entityx::Entity a1 = moveevent->actor;
-			a1.remove<Position>();
-			a1.assign_from_copy<Position>(moveevent->to);
-			AppLog::instance()->AddLog("Moved from (%d,%d) to (%d,%d) \n",moveevent->from.x,moveevent->from.y,moveevent->to.x,moveevent->to.y);
-		} else
-			//effects
-		{
-			AppLog::instance()->AddLog("Move to (%d,%d) impossible \n",moveevent->to.x,moveevent->to.y);
-		}
-	}
-};
 
-
-struct OpenEvent :GameEvent
+struct OpenAction : public Action
 {
-	OpenEvent(entityx::Entity actor,entityx::Entity target):
+public:
+	OpenAction(entityx::Entity actor,entityx::Entity target):
 			actor(actor),target(target) {};
 	entityx::Entity actor;
 	entityx::Entity target;
+	virtual void execute()
+	{
+		entityx::Entity t1 = target;
+		bool openstate = t1.component<BaseProperties>().get()->passable;
+		t1.component<BaseProperties>().get()->passable=!openstate;
+		if (!openstate==true)
+		{
+			strcpy(t1.component<Renderable>().get()->glyph,"O");
+		}
+		else
+		{
+			strcpy(t1.component<Renderable>().get()->glyph,"C");
+		}
+		AppLog::instance()->AddLog("Opened %s \n", t1.component<BaseProperties>().get()->name);
+
+	}
 
 };
 
 struct Agent {
 	Agent()
 	{
-		plan=std::vector<GameEvent*>();
+		plan=std::vector<Action*>();
 	};
-	std::vector<GameEvent*> plan;
+	std::vector<Action*> plan;
 };
 
 
@@ -216,53 +225,35 @@ public:
 class ActionSystem : public exn::System<ActionSystem>, public exn::Receiver<ActionSystem> {
 public:
 	void configure(entityx::EventManager &event_manager)  {
-		event_manager.subscribe<MoveEvent>(*this);
-		event_manager.subscribe<OpenEvent>(*this);
-
-		//event_manager.subscribe<Event>(*this);
+		event_manager.subscribe<ActionEvent>(*this);
+		//event_manager.subscribe<OpenAction>(*this);
 	}
 
 	void update(entityx::EntityManager &es, entityx::EventManager &events, exn::TimeDelta dt) {
 		ImGui::Begin("Actions");
+		if (ImGui::Button("Act"))
+		{
+			exn::ComponentHandle<Agent> agent;
+
+			for (exn::Entity entity : es.entities_with_components(agent)) {
+				events.emit<ActionEvent>(entity.component<Agent>().get());
+			}
+
+		};
+
 		ImGui::End();
 	}
 
-
-
-	void receive(const MoveEvent &moveevent) {
-		/*
-			//preconditions
-		if (isPassable(moveevent->to.x,moveevent->to.y))
+	void receive(const ActionEvent &actionevent) {
+		if (actionevent.agent->plan.size()>0)
 		{
-			entityx::Entity a1 = moveevent->actor;
-			a1.remove<Position>();
-			a1.assign_from_copy<Position>(moveevent->to);
-			AppLog::instance()->AddLog("Moved from (%d,%d) to (%d,%d) \n",moveevent->from.x,moveevent->from.y,moveevent->to.x,moveevent->to.y);
-		} else
-			//effects
-		{
-			AppLog::instance()->AddLog("Move to (%d,%d) impossible \n",moveevent->to.x,moveevent->to.y);
+			actionevent.agent->plan[0]->execute();
+			//actionevent.agent->plan.pop_back();
+			actionevent.agent->plan.erase(actionevent.agent->plan.begin());
 		}
-		 */
 	}
 
-	void receive(const OpenEvent &openevent) {
-		//ex::ComponentHandle<Body> body = moveevent.actor.component<Body>();
-		entityx::Entity t1 = openevent.target;
-		bool openstate = t1.component<BaseProperties>().get()->passable;
-		t1.component<BaseProperties>().get()->passable=!openstate;
-		if (openstate==true)
-		{
-			strcpy(t1.component<Renderable>().get()->glyph,"O");
-		}
-		else
-		{
-			strcpy(t1.component<Renderable>().get()->glyph,"C");
-		}
 
-		//t1.component<Renderable>().get()->glyph=openstate ? "C":"O";
-		//entityx::Entity a1 = moveevent.actor;
-	}
 
 };
 
