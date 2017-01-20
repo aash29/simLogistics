@@ -15,14 +15,6 @@ namespace exn = entityx;
 //  COMPONENTS
 
 
-/*
-struct BaseProperties {
-	BaseProperties(char* name) :
-		name(name) {}
-	char* name;
-};
- */
-
 struct BaseProperties {
 	BaseProperties(const char* nameInit, bool init_passable)
 			 {
@@ -67,8 +59,18 @@ struct Renderable
 		strcpy(glyph,"U");
 	}
 	char glyph[2];
+	bool visible = true;
 };
 
+
+struct Inventory {
+	Inventory()
+	{
+		inventory=std::vector<entityx::Entity>();
+	}
+
+	std::vector<entityx::Entity> inventory;
+};
 
 
 bool isPassable(int x, int y)
@@ -92,7 +94,8 @@ bool isPassable(int x, int y)
 class Action
 {
 public:
-virtual void execute()=0;
+	virtual void execute()=0;
+	virtual void Serialize(){};
 };
 
 struct SelectEvent
@@ -102,6 +105,17 @@ struct SelectEvent
 	entityx::Entity entity;
 
 };
+
+struct SelectCellEvent
+{
+	SelectCellEvent(int x, int y)
+			: x(x), y(y) {}
+	int x;
+	int y;
+
+};
+
+
 
 struct MouseClickEvent
 {
@@ -135,9 +149,21 @@ public:
 	 virtual void execute() {
 		//preconditions
 		if (isPassable(to.x, to.y)) {
-			entityx::Entity a1 = actor;
-			a1.remove<Position>();
-			a1.assign_from_copy<Position>(to);
+			//entityx::Entity a1 = actor;
+			//a1.remove<Position>();
+			//a1.assign_from_copy<Position>(to);
+			actor.component<Position>().get()->x=to.x;
+			actor.component<Position>().get()->y=to.y;
+
+			if (actor.has_component<Inventory>())
+			{
+				for(entityx::Entity e : actor.component<Inventory>().get()->inventory)
+				{
+					e.component<Position>().get()->x=to.x;
+					e.component<Position>().get()->y=to.y;
+				}
+			}
+
 			AppLog::instance()->AddLog("Moved from (%d,%d) to (%d,%d) \n", from.x, from.y,
 									   to.x, to.y);
 		} else
@@ -170,6 +196,33 @@ public:
 			strcpy(t1.component<Renderable>().get()->glyph,"C");
 		}
 		AppLog::instance()->AddLog("Opened %s \n", t1.component<BaseProperties>().get()->name);
+	}
+
+	virtual void Serialize()
+	{
+		if (ImGui::Begin("Actions"))
+		{
+			ImGui::Text("Open (%s, %s)", actor.component<BaseProperties>().get()->name,target.component<BaseProperties>().get()->name);
+			ImGui::End();
+		}
+	}
+
+};
+
+
+struct TakeAction : public Action
+{
+public:
+	TakeAction(entityx::Entity actor,entityx::Entity target):
+			actor(actor),target(target) {};
+	entityx::Entity actor;
+	entityx::Entity target;
+	virtual void execute()
+	{
+		entityx::Entity t1 = target;
+		actor.component<Inventory>().get()->inventory.push_back(t1);
+		t1.component<Renderable>().get()->visible=false;
+		AppLog::instance()->AddLog("Taken %s \n", t1.component<BaseProperties>().get()->name);
 
 	}
 
@@ -183,43 +236,6 @@ struct Agent {
 	std::vector<Action*> plan;
 };
 
-
-class ClickResponseSystem : public exn::System<ClickResponseSystem>, public exn::Receiver<ClickResponseSystem> {
-public:
-	void configure(entityx::EventManager &event_manager)  {
-		event_manager.subscribe<MouseClickEvent>(*this);
-	}
-	void receive(const MouseClickEvent &mouseEvent) {
-		exn::ComponentHandle<Position> position;
-
-		int cx = floor(mouseEvent.x);
-		int cy = floor(mouseEvent.y);
-
-
-		ex.entities.each<Position, BaseProperties>([cx,cy](exn::Entity entity, Position &position, BaseProperties &baseproperties) {
-			if ((position.x==cx) && (position.y==cy))
-			{
-				ex.events.emit<SelectEvent>(entity);
-
-				//ImGui::Text(baseproperties.name.c_str());
-			}
-		});
-
-
-
-		//ImGui::Text("alala");
-		//em1.emit<SelectEvent>()
-
-		/*
-		for (exn::Entity entity : es.entities_with_components(position)) {
-
-			events.emit<Position>(currentCell);
-		}
-		*/
-	}
-
-	void update(entityx::EntityManager &es, entityx::EventManager &events, exn::TimeDelta dt) override {}
-};
 
 
 class ActionSystem : public exn::System<ActionSystem>, public exn::Receiver<ActionSystem> {
@@ -252,6 +268,23 @@ public:
 			actionevent.agent->plan.erase(actionevent.agent->plan.begin());
 		}
 	}
+};
+
+
+
+class RenderSystem : public exn::System<RenderSystem > {
+public:
+
+	void update(entityx::EntityManager &es, entityx::EventManager &events, exn::TimeDelta dt) {
+		ex.entities.each<Position, Renderable>([](exn::Entity entity, Position &position ,Renderable &renderable) {
+			if (renderable.visible)
+			{
+				b2Vec2 p1 = g_camera.ConvertWorldToScreen(b2Vec2(position.x,position.y));
+				AddGfxCmdText(p1.x,g_camera.m_height-p1.y,TEXT_ALIGN_LEFT, renderable.glyph, WHITE);
+			}
+		});
+	}
+
 
 
 
@@ -260,57 +293,96 @@ public:
 class SerializationSystem : public exn::System<SerializationSystem>, public exn::Receiver<SerializationSystem> {
 public:
 
-	entityx::Entity targetEntity;
+	std::vector<entityx::Entity> targetEntities;
 	void configure(entityx::EventManager &event_manager)  {
 		event_manager.subscribe<SelectEvent>(*this);
 	}
 
 	void receive(const SelectEvent &selectEvent) {
 
-		targetEntity=selectEvent.entity;
+		targetEntities.push_back(selectEvent.entity);
 
-		//ImGui::Text("alala");
-		//em1.emit<SelectEvent>()
-
-		/*
-		for (exn::Entity entity : es.entities_with_components(position)) {
-
-			events.emit<Position>(currentCell);
-		}
-		*/
 	}
 
 	void update(entityx::EntityManager &es, entityx::EventManager &events, exn::TimeDelta dt) override {
-		if (targetEntity.id()!=targetEntity.INVALID){
-			if (targetEntity.has_component<BaseProperties>()) {
-				BaseProperties* b1 = targetEntity.component<BaseProperties>().get();
-				if (ImGui::TreeNode("BaseProperties")){
-					ImGui::InputText("name", b1->name, IM_ARRAYSIZE(b1->name));
-					ImGui::Checkbox("Passable",&(b1->passable));
-					ImGui::TreePop();
-				}
-			};
+		int i=0;
+		for (auto targetEntity: targetEntities)
+		{
+			ImGui::Separator();
+			ImGui::PushID(i);
+			if (ImGui::TreeNode("Entity"))
+			{
+				if (targetEntity.has_component<BaseProperties>()) {
+					BaseProperties* b1 = targetEntity.component<BaseProperties>().get();
+					if (ImGui::TreeNode("BaseProperties")){
+						ImGui::InputText("name", b1->name, IM_ARRAYSIZE(b1->name));
+						ImGui::Checkbox("Passable",&(b1->passable));
+						ImGui::TreePop();
+					}
+				};
 
-			if (targetEntity.has_component<Position>()) {
-				Position* b1 = targetEntity.component<Position>().get();
-				if (ImGui::TreeNode("Position")) {
-					ImGui::InputInt("x", &(b1->x));
-					ImGui::InputInt("y", &(b1->y));
-					ImGui::TreePop();
-				}
-			};
+				if (targetEntity.has_component<Position>()) {
+					Position* b1 = targetEntity.component<Position>().get();
+					if (ImGui::TreeNode("Position")) {
+						ImGui::InputInt("x", &(b1->x));
+						ImGui::InputInt("y", &(b1->y));
+						ImGui::TreePop();
+					}
+				};
 
-			if (targetEntity.has_component<Renderable>()) {
-				Renderable* b1 = targetEntity.component<Renderable>().get();
-				if (ImGui::TreeNode("Renderable")){
-					ImGui::InputText("glyph", b1->glyph, 2);
-					ImGui::TreePop();
-				}
-			};
+				if (targetEntity.has_component<Renderable>()) {
+					Renderable* b1 = targetEntity.component<Renderable>().get();
+					if (ImGui::TreeNode("Renderable")){
+						ImGui::InputText("glyph", b1->glyph, 2);
+						ImGui::Checkbox("visible",&(b1->visible));
+						ImGui::TreePop();
+					}
+				};
+				ImGui::TreePop();
+			}
+			ImGui::PopID();
+			i++;
 
+			if (targetEntity.has_component<Agent>())
+			{
+				for (auto action : targetEntity.component<Agent>().get()->plan){
+					action->Serialize();
+				}
+			}
 		}
+
+		ImGui::Separator();
+
 	}
 
+};
+
+
+
+class ClickResponseSystem : public exn::System<ClickResponseSystem>, public exn::Receiver<ClickResponseSystem> {
+public:
+	void configure(entityx::EventManager &event_manager)  {
+		event_manager.subscribe<MouseClickEvent>(*this);
+	}
+	void receive(const MouseClickEvent &mouseEvent) {
+
+		ex.systems.system<SerializationSystem>().get()->targetEntities.clear();
+
+		exn::ComponentHandle<Position> position;
+
+		int cx = floor(mouseEvent.x);
+		int cy = floor(mouseEvent.y);
+
+
+		ex.entities.each<Position, BaseProperties>([cx,cy](exn::Entity entity, Position &position, BaseProperties &baseproperties) {
+			if ((position.x==cx) && (position.y==cy))
+			{
+				ex.events.emit<SelectEvent>(entity);
+			}
+		});
+	}
+
+	void update(entityx::EntityManager &es, entityx::EventManager &events, exn::TimeDelta dt) override {}
 };
 
 

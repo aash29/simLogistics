@@ -395,22 +395,15 @@ static void sInterface() {
     static char str1[50];
     ImGui::InputText("test",str1,IM_ARRAYSIZE(str1));
 
-
-
-    ex.entities.each<Position, BaseProperties>([](exn::Entity entity, Position &position, BaseProperties &baseproperties) {
-        if ((position.x==currentCell.x) && (position.y==currentCell.y))
-        {
-            //ImGui::Text(baseproperties.name.c_str());
-        }
-    });
-
+/*
     ex.entities.each<Position, Renderable>([](exn::Entity entity, Position &position ,Renderable &renderable) {
-        char buffer[1];
-        snprintf(buffer, 4, (char*)(&renderable.glyph));
+        //char buffer[1];
+        //snprintf(buffer, 4, (char*)(&renderable.glyph));
         //snprintf(buffer, 6, "lalala");
         b2Vec2 p1 = g_camera.ConvertWorldToScreen(b2Vec2(position.x,position.y));
-        AddGfxCmdText(p1.x,g_camera.m_height-p1.y,TEXT_ALIGN_LEFT, buffer, WHITE);
+        AddGfxCmdText(p1.x,g_camera.m_height-p1.y,TEXT_ALIGN_LEFT, renderable.glyph, WHITE);
     });
+    */
 
     AppLog::instance()->Draw("simlog");
 
@@ -495,17 +488,18 @@ int main(int argc, char **argv) {
     ex.systems.add<ClickResponseSystem>();
     ex.systems.add<SerializationSystem>();
     ex.systems.add<ActionSystem>();
+    ex.systems.add<RenderSystem>();
 
     //ex.systems.add<entityx::deps::Dependency<BaseProperties, Position, Renderable>>();
 
     ex.systems.configure();
 
 
-	entityx::Entity entity = ex.entities.create();
-    entity.assign<BaseProperties>("food",true);
-    entity.assign<Position>(0, -1);
-	entity.assign<Edible>("food");
-    entity.assign<Renderable>("F");
+	entityx::Entity food = ex.entities.create();
+    food.assign<BaseProperties>("food",true);
+    food.assign<Position>(0, -1);
+    food.assign<Edible>("food");
+    food.assign<Renderable>("F");
 
 
     entityx::Entity door = ex.entities.create();
@@ -528,6 +522,7 @@ int main(int argc, char **argv) {
     agent.assign<Position>(0, 5);
     agent.assign<Renderable>("A");
     agent.assign<Agent>();
+    agent.assign<Inventory>();
 
 
     agent.component<Agent>().get()->plan.push_back(new MoveAction(agent,Position(0,5),Position(0,4)));
@@ -535,6 +530,9 @@ int main(int argc, char **argv) {
     agent.component<Agent>().get()->plan.push_back(new MoveAction(agent,Position(0,3),Position(0,2)));
     agent.component<Agent>().get()->plan.push_back(new MoveAction(agent,Position(0,2),Position(0,1)));
     agent.component<Agent>().get()->plan.push_back(new OpenAction(agent,door));
+    agent.component<Agent>().get()->plan.push_back(new MoveAction(agent,Position(0,1),Position(0,0)));
+    agent.component<Agent>().get()->plan.push_back(new TakeAction(agent,food));
+    agent.component<Agent>().get()->plan.push_back(new MoveAction(agent,Position(0,0),Position(0,1)));
     //ex.events.emit<ActionEvent>(agent.component<Agent>().get());
 
     //OpenAction a1(agent,door);
@@ -570,6 +568,7 @@ int main(int argc, char **argv) {
         ex.systems.update<ClickResponseSystem>(1);
         ex.systems.update<SerializationSystem>(1);
         ex.systems.update<ActionSystem>(1);
+        ex.systems.update<RenderSystem>(1);
 
 
         // 1. Show a simple window
