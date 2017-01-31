@@ -6,6 +6,8 @@
 #include "coinsLog.h"
 #include "eventqueue.h"
 #include "lambdaevents.h"
+#include "path_finding.h"
+
 
 entityx::EntityX ex;
 

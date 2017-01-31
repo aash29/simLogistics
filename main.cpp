@@ -45,6 +45,8 @@
 
 #include <vector>
 
+#include "path_ex.hpp"
+
 
 #ifdef _MSC_VER
 #define snprintf _snprintf
@@ -516,7 +518,6 @@ int main(int argc, char **argv) {
     spawnWall(-1,-1);
     spawnWall(-1,0);
 
-
     entityx::Entity agent = ex.entities.create();
     agent.assign<BaseProperties>("agent",true);
     agent.assign<Position>(0, 5);
@@ -525,18 +526,31 @@ int main(int argc, char **argv) {
     agent.assign<Inventory>();
 
 
-    agent.component<Agent>().get()->plan.push_back(new MoveAction(agent,Position(0,5),Position(0,4)));
-    agent.component<Agent>().get()->plan.push_back(new MoveAction(agent,Position(0,4),Position(0,3)));
-    agent.component<Agent>().get()->plan.push_back(new MoveAction(agent,Position(0,3),Position(0,2)));
-    agent.component<Agent>().get()->plan.push_back(new MoveAction(agent,Position(0,2),Position(0,1)));
+    location_t st_pos {0,5};
+    location_t end_pos {0,1};
+
+    path = find_path<location_t, navigator>(st_pos, end_pos);
+    path->steps.push_front(st_pos);
+
+    if (path->success) {
+        AppLog::instance()->AddLog("path found \n");
+    }
+
+    for (auto p1 = path->steps.begin(); p1!=path->steps.end(); p1=p1+2)
+    {
+        //AppLog::instance()->AddLog("path found \n");
+        AppLog::instance()->AddLog("%d,%d \n", p1->x,p1->y);
+
+        agent.component<Agent>().get()->plan.push_back(new MoveAction(agent,Position(p1->x,p1->y),Position((p1+1)->x,(p1+1)->y)));
+        //p0=p1;
+    }
+
     agent.component<Agent>().get()->plan.push_back(new OpenAction(agent,door));
     agent.component<Agent>().get()->plan.push_back(new MoveAction(agent,Position(0,1),Position(0,0)));
     agent.component<Agent>().get()->plan.push_back(new TakeAction(agent,food));
     agent.component<Agent>().get()->plan.push_back(new MoveAction(agent,Position(0,0),Position(0,1)));
-    //ex.events.emit<ActionEvent>(agent.component<Agent>().get());
 
-    //OpenAction a1(agent,door);
-    //a1.execute();
+
 
 
     while (!glfwWindowShouldClose(mainWindow)) {
