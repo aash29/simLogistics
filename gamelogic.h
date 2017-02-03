@@ -78,8 +78,9 @@ struct Inventory {
 bool isPassable(int x, int y)
 {
 	bool result = true;
-	ex.entities.each<Position, BaseProperties>([x,y,&result](exn::Entity entity, Position &position, BaseProperties &baseproperties) {
-
+	ex.entities.each<Position,BaseProperties>([x,y,&result](exn::Entity entity, Position &position, BaseProperties &baseproperties)  {
+		//result = false;
+		//AppLog::instance()->AddLog("Checking passability");
 		if ((position.x==x) && (position.y==y))
 		{
 			if (!baseproperties.passable)
@@ -91,13 +92,35 @@ bool isPassable(int x, int y)
 	return result;
 }
 
+
+bool isNear(Position p1, Position p2)
+{
+	return (std::max(abs(p1.x-p2.x),abs(p1.y-p2.y))<=1);
+}
+
+bool isNear(exn::Entity entity1, exn::Entity entity2)
+{
+	Position* pos1 = entity1.component<Position>().get();
+	Position* pos2 = entity2.component<Position>().get();
+return (isNear(*pos1,*pos2));
+}
+
+
+
 //EVENTS
 
 class Action
 {
 public:
-	virtual void execute()=0;
-	virtual void Serialize(){};
+	virtual bool execute()=0;
+	virtual void Serialize()
+	{
+		if (ImGui::Begin("Actions"))
+			{
+			ImGui::Text("description not provided");
+			ImGui::End();
+		}
+	};
 };
 
 struct SelectEvent
@@ -148,9 +171,9 @@ public:
 	Position from;
 	Position to;
 	 //using GameEvent::execute;
-	 virtual void execute() {
+	 virtual bool execute() {
 		//preconditions
-		if (isPassable(to.x, to.y)) {
+		if ((isPassable(to.x, to.y)) && isNear(from,to)) {
 			//entityx::Entity a1 = actor;
 			//a1.remove<Position>();
 			//a1.assign_from_copy<Position>(to);
@@ -168,10 +191,21 @@ public:
 
 			AppLog::instance()->AddLog("Moved from (%d,%d) to (%d,%d) \n", from.x, from.y,
 									   to.x, to.y);
+			return true;
 		} else
 			//effects
 		{
 			AppLog::instance()->AddLog("Move to (%d,%d) impossible \n", to.x, to.y);
+			return false;
+		}
+	}
+
+	virtual void Serialize()
+	{
+		if (ImGui::Begin("Actions"))
+		{
+			ImGui::Text("Move from (%d,%d) to (%d,%d)", from.x,from.y,to.x,to.y);
+			ImGui::End();
 		}
 	}
 };
@@ -184,20 +218,27 @@ public:
 			actor(actor),target(target) {};
 	entityx::Entity actor;
 	entityx::Entity target;
-	virtual void execute()
+	virtual bool execute()
 	{
 		entityx::Entity t1 = target;
 		bool openstate = t1.component<BaseProperties>().get()->passable;
-		t1.component<BaseProperties>().get()->passable=!openstate;
-		if (!openstate==true)
-		{
-			strcpy(t1.component<Renderable>().get()->glyph,"O");
+		if (isNear(actor,target)) {
+			t1.component<BaseProperties>().get()->passable=!openstate;
+
+			if (!openstate == true) {
+				strcpy(t1.component<Renderable>().get()->glyph, "O");
+			}
+			else {
+				strcpy(t1.component<Renderable>().get()->glyph, "C");
+			}
+			AppLog::instance()->AddLog("Opened %s \n", t1.component<BaseProperties>().get()->name);
+			return true;
 		}
 		else
 		{
-			strcpy(t1.component<Renderable>().get()->glyph,"C");
+			AppLog::instance()->AddLog("Cannot open %s \n", t1.component<BaseProperties>().get()->name);
+			return false;
 		}
-		AppLog::instance()->AddLog("Opened %s \n", t1.component<BaseProperties>().get()->name);
 	}
 
 	virtual void Serialize()
@@ -219,15 +260,32 @@ public:
 			actor(actor),target(target) {};
 	entityx::Entity actor;
 	entityx::Entity target;
-	virtual void execute()
+	virtual bool execute()
 	{
 		entityx::Entity t1 = target;
-		actor.component<Inventory>().get()->inventory.push_back(t1);
-		t1.component<Renderable>().get()->visible=false;
-		AppLog::instance()->AddLog("Taken %s \n", t1.component<BaseProperties>().get()->name);
-
+		if (isNear(actor, target))
+		{
+			actor.component<Inventory>().get()->inventory.push_back(t1);
+			t1.component<Renderable>().get()->visible=false;
+			AppLog::instance()->AddLog("Taken %s \n", t1.component<BaseProperties>().get()->name);
+			return true;
+		}
+		else
+		{
+			AppLog::instance()->AddLog("Cannot take %s \n", t1.component<BaseProperties>().get()->name);
+			return false;
+		}
 	}
 
+
+	virtual void Serialize()
+	{
+		if (ImGui::Begin("Actions"))
+		{
+			ImGui::Text("Take %s", target.component<BaseProperties>().get()->name);
+			ImGui::End();
+		}
+	}
 };
 
 struct Agent {

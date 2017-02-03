@@ -509,6 +509,8 @@ int main(int argc, char **argv) {
     door.assign<BaseProperties>("door",false);
     door.assign<Renderable>("C");
 
+    BaseProperties* dbp = door.component<BaseProperties>().get();
+
 
     spawnWall(1,0);
     spawnWall(1,-1);
@@ -535,6 +537,7 @@ int main(int argc, char **argv) {
     if (path->success) {
         AppLog::instance()->AddLog("path found \n");
     }
+
 
     for (auto p1 = path->steps.begin(); p1!=path->steps.end(); p1=p1+2)
     {
