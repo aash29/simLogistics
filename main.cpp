@@ -131,6 +131,28 @@ void spawnWall(int x, int y)
     w1.assign<Renderable>("W");
 }
 
+void spawnFood(int x, int y)
+{
+    entityx::Entity food = ex.entities.create();
+    food.assign<BaseProperties>("food",true);
+    food.assign<Position>(x, y);
+    food.assign<Edible>("food");
+    food.assign<Renderable>("F");
+}
+
+
+void transformPathToActionSeq(std::shared_ptr<navigation_path<location_t>> path, entityx::Entity agent) {
+    for (auto p1 = path->steps.begin(); p1 != path->steps.end(); p1 = p1 + 2) {
+        //AppLog::instance()->AddLog("path found \n");
+        AppLog::instance()->AddLog("%d,%d \n", p1->x, p1->y);
+
+        agent.component<Agent>().get()->plan.push_back(
+                new MoveAction(agent, Position(p1->x, p1->y), Position((p1 + 1)->x, (p1 + 1)->y)));
+        //p0=p1;
+    }
+}
+
+
 //
 static void sResizeWindow(GLFWwindow *, int width, int height) {
     g_camera.m_width = width;
@@ -497,19 +519,14 @@ int main(int argc, char **argv) {
     ex.systems.configure();
 
 
-	entityx::Entity food = ex.entities.create();
-    food.assign<BaseProperties>("food",true);
-    food.assign<Position>(0, -1);
-    food.assign<Edible>("food");
-    food.assign<Renderable>("F");
+    spawnFood(0,-1);
+    spawnFood(-7,-7);
 
 
     entityx::Entity door = ex.entities.create();
     door.assign<Position>(0, 0);
-    door.assign<BaseProperties>("door",false);
+    door.assign<BaseProperties>("door",true);
     door.assign<Renderable>("C");
-
-    BaseProperties* dbp = door.component<BaseProperties>().get();
 
 
     spawnWall(1,0);
@@ -528,30 +545,33 @@ int main(int argc, char **argv) {
     agent.assign<Inventory>();
 
 
-    location_t st_pos {0,5};
-    location_t end_pos {0,1};
+    ex.entities.each<Edible>([&agent](exn::Entity entity, Edible &edible)
+        {
+            Position* p1 = agent.component<Position>().get();
+            Position* p2 = entity.component<Position>().get();
+            location_t st_pos {p1->x,p1->y};
+            location_t end_pos {p2->x,p2->y};
+            path = find_path<location_t, navigator>(st_pos, end_pos);
 
-    path = find_path<location_t, navigator>(st_pos, end_pos);
-    path->steps.push_front(st_pos);
+            if (path->success) {
+                AppLog::instance()->AddLog("path found \n");
+            }
 
-    if (path->success) {
-        AppLog::instance()->AddLog("path found \n");
-    }
+            path->steps.push_front(st_pos);
+            transformPathToActionSeq(path,agent);
+
+            agent.component<Agent>().get()->plan.push_back(new TakeAction(agent,entity));
+            //path.
 
 
-    for (auto p1 = path->steps.begin(); p1!=path->steps.end(); p1=p1+2)
-    {
-        //AppLog::instance()->AddLog("path found \n");
-        AppLog::instance()->AddLog("%d,%d \n", p1->x,p1->y);
+        }
+    );
 
-        agent.component<Agent>().get()->plan.push_back(new MoveAction(agent,Position(p1->x,p1->y),Position((p1+1)->x,(p1+1)->y)));
-        //p0=p1;
-    }
 
-    agent.component<Agent>().get()->plan.push_back(new OpenAction(agent,door));
-    agent.component<Agent>().get()->plan.push_back(new MoveAction(agent,Position(0,1),Position(0,0)));
-    agent.component<Agent>().get()->plan.push_back(new TakeAction(agent,food));
-    agent.component<Agent>().get()->plan.push_back(new MoveAction(agent,Position(0,0),Position(0,1)));
+
+    //agent.component<Agent>().get()->plan.push_back(new OpenAction(agent,door));
+    //agent.component<Agent>().get()->plan.push_back(new MoveAction(agent,Position(0,1),Position(0,0)));
+    //agent.component<Agent>().get()->plan.push_back(new MoveAction(agent,Position(0,0),Position(0,1)));
 
 
 
