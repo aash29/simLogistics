@@ -509,6 +509,15 @@ int main(int argc, char **argv) {
 
 
 
+    char *calledPython="/home/aash29/cpp/fast-downward/fast-downward.py";  // it can also be resolved using your PATH environment variable
+    char *pythonArgs[]={calledPython,"--build=release64",  "../logisticsDomain.pddl", "../logisticsProblem.pddl", "--search \"astar(lmcut())\"",NULL};
+    execvp(calledPython,pythonArgs);
+
+    // if we get here it misfired
+    //perror("Python execution");
+
+
+
     ex.systems.add<ClickResponseSystem>();
     ex.systems.add<SerializationSystem>();
     ex.systems.add<ActionSystem>();
