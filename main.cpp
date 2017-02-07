@@ -511,7 +511,40 @@ int main(int argc, char **argv) {
 
     char *calledPython="/home/aash29/cpp/fast-downward/fast-downward.py";  // it can also be resolved using your PATH environment variable
     char *pythonArgs[]={calledPython,"--build=release64",  "../logisticsDomain.pddl", "../logisticsProblem.pddl", "--search \"astar(lmcut())\"",NULL};
-    execvp(calledPython,pythonArgs);
+
+    char execstr[80] ;
+
+    char * line = NULL;
+    size_t len = 0;
+
+    strcpy(execstr, calledPython);
+    strcat(execstr, " --build=release64");
+    strcat(execstr, " ../logisticsDomain.pddl");
+    strcat(execstr, " ../logisticsProblem.pddl");
+    strcat(execstr, " --search \"astar(lmcut())\"");
+
+    char key[] = "Solution found!\n";
+    char keyEnd[] = "Plan length";
+    FILE* in = popen(execstr, "r");
+    bool beginPlan=false;
+    while (getline(&line, &len, in)!= EOF) {
+        //AppLog::instance()->AddLog(line);
+        if (strcmp (key,line) == 0)
+        {
+            beginPlan=true;
+        }
+
+        if (strstr(line,keyEnd)!=NULL)
+        {
+            beginPlan=false;
+        }
+        if (beginPlan)
+        {
+            AppLog::instance()->AddLog(line);
+        }
+    }
+
+    //execvp(calledPython,pythonArgs);
 
     // if we get here it misfired
     //perror("Python execution");
