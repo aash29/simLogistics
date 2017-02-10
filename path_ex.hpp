@@ -129,7 +129,9 @@ struct navigator {
     // adjacent to (or even a preferred distance from) the goal. In this case,
     // we're trying to get to the goal rather than near it.
     static bool is_goal(location_t &pos, location_t &goal) {
-        return pos == goal;
+        //return pos == goal;
+        return (std::max(abs(pos.x-goal.x),abs(pos.y-goal.y))<=1.1f);
+        //return ((abs(pos.x - goal.x)<=1)&&(abs(pos.y - goal.y)<=1));
     }
 
     // This is where we calculate where you can go from a given tile. In this case, we check

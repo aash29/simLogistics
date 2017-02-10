@@ -292,8 +292,12 @@ struct Agent {
 	Agent()
 	{
 		plan=std::vector<Action*>();
+		planText = std::vector<std::string>();
 	};
 	std::vector<Action*> plan;
+	std::vector<std::string> planText;
+	Position currentDestination;
+
 };
 
 

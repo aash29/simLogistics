@@ -40,10 +40,12 @@
 
 #include <GLFW/glfw3.h>
 #include <stdio.h>
-//#include "entityx/entityx.h"
+
 #include "gamelogic.h"
 
 #include <vector>
+#include <map>
+#include <string>
 
 #include "path_ex.hpp"
 
@@ -101,6 +103,7 @@ static void sCreateUI() {
 
 }
 
+auto inGameNames = std::map < std::string, entityx::Entity>();
 
 void drawSquare()
 {
@@ -131,27 +134,138 @@ void spawnWall(int x, int y)
     w1.assign<Renderable>("W");
 }
 
-void spawnFood(int x, int y)
+entityx::Entity spawnFood(int x, int y)
 {
     entityx::Entity food = ex.entities.create();
     food.assign<BaseProperties>("food",true);
     food.assign<Position>(x, y);
     food.assign<Edible>("food");
     food.assign<Renderable>("F");
+
+    return food;
 }
 
 
 void transformPathToActionSeq(std::shared_ptr<navigation_path<location_t>> path, entityx::Entity agent) {
     for (auto p1 = path->steps.begin(); p1 != path->steps.end(); p1 = p1 + 2) {
-        //AppLog::instance()->AddLog("path found \n");
         AppLog::instance()->AddLog("%d,%d \n", p1->x, p1->y);
-
         agent.component<Agent>().get()->plan.push_back(
                 new MoveAction(agent, Position(p1->x, p1->y), Position((p1 + 1)->x, (p1 + 1)->y)));
         //p0=p1;
     }
 }
 
+void goToEntity(entityx::Entity agent, entityx::Entity target)
+{
+    Position* p1 = &(agent.component<Agent>().get()->currentDestination);
+    Position* p2 = target.component<Position>().get();
+    location_t st_pos {p1->x,p1->y};
+    location_t end_pos {p2->x,p2->y};
+    path = find_path<location_t, navigator>(st_pos, end_pos);
+
+    if (path->success) {
+        AppLog::instance()->AddLog("path found \n");
+
+
+        path->steps.push_front(st_pos);
+        if (path->steps.size()>0)
+        {
+            transformPathToActionSeq(path,agent);
+
+            agent.component<Agent>().get()->currentDestination=Position(p2->x,p2->y);
+        }
+    }
+}
+
+
+std::vector<std::string> findPlan()
+{
+    char *calledPython="/home/aash29/cpp/fast-downward/fast-downward.py";  // it can also be resolved using your PATH environment variable
+    char *pythonArgs[]={calledPython,"--build=release64",  "../logisticsDomain.pddl", "../logisticsProblem.pddl", "--search \"astar(lmcut())\"",NULL};
+
+    char execstr[80] ;
+
+    char * line = NULL;
+    size_t len = 0;
+
+    strcpy(execstr, calledPython);
+    strcat(execstr, " --build=release64");
+    strcat(execstr, " ../logisticsDomain.pddl");
+    strcat(execstr, " ../logisticsProblem.pddl");
+    strcat(execstr, " --search \"astar(lmcut())\"");
+
+    char key[] = "Solution found!\n";
+    char keyEnd[] = "Plan length";
+
+    std::vector<std::string> result = std::vector<std::string>();
+
+    FILE* in = popen(execstr, "r");
+    bool beginPlan=false;
+    while (getline(&line, &len, in)!= EOF) {
+        //AppLog::instance()->AddLog(line);
+        if (strcmp (key,line) == 0)
+        {
+            beginPlan=true;
+        }
+
+        if (strstr(line,keyEnd)!=NULL)
+        {
+            beginPlan=false;
+        }
+        if (beginPlan)
+        {
+            result.push_back(std::string(line));
+            AppLog::instance()->AddLog(line);
+        }
+    }
+    return result;
+}
+
+    vector<std::string> split(const char *str, char c = ' ')
+    {
+        vector<std::string> result;
+
+        do
+        {
+            const char *begin = str;
+
+            while(*str != c && *str)
+                str++;
+
+            result.push_back(std::string(begin, str));
+        } while (0 != *str++);
+
+        return result;
+    }
+
+
+void parsePlan(std::vector<std::string> planText, entityx::Entity agent)
+{
+    agent.component<Agent>().get()->currentDestination=*agent.component<Position>().get();
+
+    for (int i=2;i<planText.size();i++)
+    {
+        std::vector<std::string> v1 =split(planText[i].c_str());
+        if ("move-to-point" == v1[0])
+        {
+            std::string target = v1[2];
+            goToEntity(agent,inGameNames[target]);
+            //AppLog::instance()->AddLog("moving");
+        }
+        if ("place-in-inventory" == v1[0])
+        {
+            std::string target = v1[2];
+            agent.component<Agent>().get()->plan.push_back(new TakeAction(agent,inGameNames[target]));
+            //AppLog::instance()->AddLog("moving");
+        }
+
+        if ("make-accessible" == v1[0])
+        {
+            std::string target = v1[3];
+            agent.component<Agent>().get()->plan.push_back(new OpenAction(agent,inGameNames[target]));
+        }
+    }
+}
 
 //
 static void sResizeWindow(GLFWwindow *, int width, int height) {
@@ -419,15 +533,6 @@ static void sInterface() {
     static char str1[50];
     ImGui::InputText("test",str1,IM_ARRAYSIZE(str1));
 
-/*
-    ex.entities.each<Position, Renderable>([](exn::Entity entity, Position &position ,Renderable &renderable) {
-        //char buffer[1];
-        //snprintf(buffer, 4, (char*)(&renderable.glyph));
-        //snprintf(buffer, 6, "lalala");
-        b2Vec2 p1 = g_camera.ConvertWorldToScreen(b2Vec2(position.x,position.y));
-        AddGfxCmdText(p1.x,g_camera.m_height-p1.y,TEXT_ALIGN_LEFT, renderable.glyph, WHITE);
-    });
-    */
 
     AppLog::instance()->Draw("simlog");
 
@@ -509,46 +614,6 @@ int main(int argc, char **argv) {
 
 
 
-    char *calledPython="/home/aash29/cpp/fast-downward/fast-downward.py";  // it can also be resolved using your PATH environment variable
-    char *pythonArgs[]={calledPython,"--build=release64",  "../logisticsDomain.pddl", "../logisticsProblem.pddl", "--search \"astar(lmcut())\"",NULL};
-
-    char execstr[80] ;
-
-    char * line = NULL;
-    size_t len = 0;
-
-    strcpy(execstr, calledPython);
-    strcat(execstr, " --build=release64");
-    strcat(execstr, " ../logisticsDomain.pddl");
-    strcat(execstr, " ../logisticsProblem.pddl");
-    strcat(execstr, " --search \"astar(lmcut())\"");
-
-    char key[] = "Solution found!\n";
-    char keyEnd[] = "Plan length";
-    FILE* in = popen(execstr, "r");
-    bool beginPlan=false;
-    while (getline(&line, &len, in)!= EOF) {
-        //AppLog::instance()->AddLog(line);
-        if (strcmp (key,line) == 0)
-        {
-            beginPlan=true;
-        }
-
-        if (strstr(line,keyEnd)!=NULL)
-        {
-            beginPlan=false;
-        }
-        if (beginPlan)
-        {
-            AppLog::instance()->AddLog(line);
-        }
-    }
-
-    //execvp(calledPython,pythonArgs);
-
-    // if we get here it misfired
-    //perror("Python execution");
-
 
 
     ex.systems.add<ClickResponseSystem>();
@@ -556,20 +621,27 @@ int main(int argc, char **argv) {
     ex.systems.add<ActionSystem>();
     ex.systems.add<RenderSystem>();
 
-    //ex.systems.add<entityx::deps::Dependency<BaseProperties, Position, Renderable>>();
-
     ex.systems.configure();
 
 
-    spawnFood(0,-1);
-    spawnFood(-7,-7);
+    inGameNames["food"]=spawnFood(0,-1);
+    //spawnFood(-7,-7);
 
 
     entityx::Entity door = ex.entities.create();
     door.assign<Position>(0, 0);
-    door.assign<BaseProperties>("door",true);
+    door.assign<BaseProperties>("door",false);
     door.assign<Renderable>("C");
 
+    inGameNames["door1-0"]=door;
+
+
+    entityx::Entity key10 = ex.entities.create();
+    key10.assign<Position>(-5, 5);
+    key10.assign<BaseProperties>("key",true);
+    key10.assign<Renderable>("K");
+
+    inGameNames["key1-0"]=key10;
 
     spawnWall(1,0);
     spawnWall(1,-1);
@@ -587,27 +659,12 @@ int main(int argc, char **argv) {
     agent.assign<Inventory>();
 
 
-    ex.entities.each<Edible>([&agent](exn::Entity entity, Edible &edible)
-        {
-            Position* p1 = agent.component<Position>().get();
-            Position* p2 = entity.component<Position>().get();
-            location_t st_pos {p1->x,p1->y};
-            location_t end_pos {p2->x,p2->y};
-            path = find_path<location_t, navigator>(st_pos, end_pos);
+    agent.component<Agent>().get()->planText=findPlan();
 
-            if (path->success) {
-                AppLog::instance()->AddLog("path found \n");
-            }
-
-            path->steps.push_front(st_pos);
-            transformPathToActionSeq(path,agent);
-
-            agent.component<Agent>().get()->plan.push_back(new TakeAction(agent,entity));
-            //path.
+    parsePlan(agent.component<Agent>().get()->planText, agent);
 
 
-        }
-    );
+
 
 
 
