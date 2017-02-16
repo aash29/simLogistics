@@ -1,17 +1,18 @@
 
 (define (domain logistics_PDDL)
-(:requirements :strips)
+(:requirements :adl)
+(:types food - object)
 
 (:predicates 
 	(npc-at ?area)
 	(npc-close-to ?point)
-        (npc-holding ?o)
+    (npc-holding ?o)
 	(npc-not-close-to-point)
 
 	(point-of-interest ?point ?area)
 
 	(item ?item)
-	
+
 	(key ?item ?waypoint)
 
 	(connected ?area1 ?area2 ?waypoint)

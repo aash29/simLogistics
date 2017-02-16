@@ -146,13 +146,21 @@ entityx::Entity spawnFood(int x, int y)
 }
 
 
-void transformPathToActionSeq(std::shared_ptr<navigation_path<location_t>> path, entityx::Entity agent) {
-    for (auto p1 = path->steps.begin(); p1 != path->steps.end(); p1 = p1 + 2) {
+Position transformPathToActionSeq(std::shared_ptr<navigation_path<location_t>> path, entityx::Entity agent) {
+    Position cp(0,0);
+    for (auto p1 = path->steps.begin(); (std::max(abs(p1->x-path->destination.x),abs(p1->y-path->destination.y))>=1.1f); p1 = p1 + 1) {
         AppLog::instance()->AddLog("%d,%d \n", p1->x, p1->y);
-        agent.component<Agent>().get()->plan.push_back(
+        if (not (*p1==*(p1+1)))
+        {
+            agent.component<Agent>().get()->plan.push_back(
                 new MoveAction(agent, Position(p1->x, p1->y), Position((p1 + 1)->x, (p1 + 1)->y)));
+        };
+        cp.x=(p1+1)->x;
+        cp.y=(p1+1)->y;
+
         //p0=p1;
     }
+    return cp;
 }
 
 void goToEntity(entityx::Entity agent, entityx::Entity target)
@@ -170,9 +178,9 @@ void goToEntity(entityx::Entity agent, entityx::Entity target)
         path->steps.push_front(st_pos);
         if (path->steps.size()>0)
         {
-            transformPathToActionSeq(path,agent);
+            agent.component<Agent>().get()->currentDestination=transformPathToActionSeq(path,agent);
 
-            agent.component<Agent>().get()->currentDestination=Position(p2->x,p2->y);
+            //=Position(p2->x,p2->y);
         }
     }
 }
@@ -181,7 +189,7 @@ void goToEntity(entityx::Entity agent, entityx::Entity target)
 std::vector<std::string> findPlan()
 {
     char *calledPython="/home/aash29/cpp/fast-downward/fast-downward.py";  // it can also be resolved using your PATH environment variable
-    char *pythonArgs[]={calledPython,"--build=release64",  "../logisticsDomain.pddl", "../logisticsProblem.pddl", "--search \"astar(lmcut())\"",NULL};
+    //char *pythonArgs[]={calledPython,"--build=release64",  "./fps/logisticsDomain.pddl", "./fps/logisticsProblem.pddl", "--search \"astar(lmcut())\"",NULL};
 
     char execstr[80] ;
 
@@ -190,19 +198,23 @@ std::vector<std::string> findPlan()
 
     strcpy(execstr, calledPython);
     strcat(execstr, " --build=release64");
-    strcat(execstr, " ../logisticsDomain.pddl");
-    strcat(execstr, " ../logisticsProblem.pddl");
-    strcat(execstr, " --search \"astar(lmcut())\"");
+    strcat(execstr, " ./logisticsDomain.pddl");
+    strcat(execstr, " ./logisticsProblem.pddl");
+    strcat(execstr, " --search \"astar(cg())\"");
 
     char key[] = "Solution found!\n";
     char keyEnd[] = "Plan length";
 
     std::vector<std::string> result = std::vector<std::string>();
+    char currentDir[50];
+    getcwd(currentDir,50);
+
+    AppLog::instance()->AddLog("%s",currentDir);
 
     FILE* in = popen(execstr, "r");
     bool beginPlan=false;
     while (getline(&line, &len, in)!= EOF) {
-        //AppLog::instance()->AddLog(line);
+        AppLog::instance()->AddLog(line);
         if (strcmp (key,line) == 0)
         {
             beginPlan=true;
@@ -624,7 +636,9 @@ int main(int argc, char **argv) {
     ex.systems.configure();
 
 
-    inGameNames["food"]=spawnFood(0,-1);
+    inGameNames["food1"]=spawnFood(0,-1);
+
+    inGameNames["food2"]=spawnFood(6,6);
     //spawnFood(-7,-7);
 
 
