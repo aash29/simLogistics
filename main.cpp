@@ -200,7 +200,7 @@ std::vector<std::string> findPlan()
     strcat(execstr, " --build=release64");
     strcat(execstr, " ./logisticsDomain.pddl");
     strcat(execstr, " ./logisticsProblem.pddl");
-    strcat(execstr, " --search \"astar(cg())\"");
+    strcat(execstr, " --search \"astar(goalcount())\"");
 
     char key[] = "Solution found!\n";
     char keyEnd[] = "Plan length";

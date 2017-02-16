@@ -1,7 +1,11 @@
 
 (define (domain logistics_PDDL)
 (:requirements :adl)
-(:types food - object)
+(:types
+    food - object
+    door - object
+    area - object
+    key-type - object)
 
 (:predicates 
 	(npc-at ?area)

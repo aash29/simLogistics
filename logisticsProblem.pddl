@@ -1,13 +1,10 @@
 (define (problem logisticsProblem0)
 (:domain logistics_PDDL)
 (:objects
-	area0
-	area1
-	food1 - food
-	food2 - food
-
-	door1-0
-	key1-0 
+	area0 area1 - area
+	food1 food2 - food
+	door1-0 - door
+	key1-0 - key-type
 	)
 
 (:init
@@ -35,8 +32,8 @@
 )
 
 (:goal
-(and (npc-holding food1) (npc-holding food2))
-;(forall (?f - food) (npc-holding ?f))
+;(and (npc-holding food1) (npc-holding food2))
+(forall (?f - food) (npc-holding ?f))
 ;(forall (?p - passenger) (served ?p)))
 
 
