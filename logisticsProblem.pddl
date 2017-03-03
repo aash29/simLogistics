@@ -2,7 +2,7 @@
 (:domain logistics_PDDL)
 (:objects
 	area0 area1 - area
-	food1 food2 - food
+	food1 food2 food3 - food
 	door1-0 - door
 	key1-0 - key-type
 	)
@@ -24,11 +24,12 @@
 
 (item food1)
 (item food2)
+(item food3)
 ;(food food1)
 
 (point-of-interest food1 area1)
 (point-of-interest food2 area0)
-
+(point-of-interest food3 area0)
 )
 
 (:goal

@@ -125,13 +125,14 @@ void drawSquare()
 
 }
 
-
 void spawnWall(int x, int y)
 {
     entityx::Entity w1 = ex.entities.create();
     w1.assign<BaseProperties>("wall",false);
     w1.assign<Position>(x, y);
     w1.assign<Renderable>("W");
+
+    map.walkable[map.at(x, y)]=false;
 }
 
 entityx::Entity spawnFood(int x, int y)
@@ -639,6 +640,9 @@ int main(int argc, char **argv) {
     inGameNames["food1"]=spawnFood(0,-1);
 
     inGameNames["food2"]=spawnFood(6,6);
+
+    inGameNames["food3"]=spawnFood(-7,-7);
+
     //spawnFood(-7,-7);
 
 
@@ -664,6 +668,7 @@ int main(int argc, char **argv) {
     spawnWall(-1,-2);
     spawnWall(-1,-1);
     spawnWall(-1,0);
+
 
     entityx::Entity agent = ex.entities.create();
     agent.assign<BaseProperties>("agent",true);
